@@ -1,9 +1,24 @@
-### Formula 1 Discord Bot
+### Formula 1 Services
 
-A simple bot for getting Formula 1 information for my Discord community.
-Uses a combonation of the ErgastF1 and live data from the Formula 1 website.
+Contains different apps for collecting and using F1 data.
+Scrapes the official F1 website for current season data.
 
-Currently need to cache all Ergast API info to redis.
-Heavily WIP and only does what I needed. Feel free to take for whatever you want.
+#### F1APIGenerator
+- Collects information from the F1 website.
 
-This requires Redis for sending and receiveing data from the F1LiveTelemetry solution for live race messages.
+#### F1Documents
+- Downloads FIA Documents for race events.
+- Checks for new news articles from Sky & BBC.
+
+#### F1LiveTelemetry
+- Connects to the F1 Livetimings websocket to get live information about racing events.
+
+#### F1Manager
+- Triggers actions based on race weekend ends and starting.
+- Notifies Discord bot of event changes and will be used to tell F1APIGenerator to collect end of race stats.
+
+#### F1Discord
+- The discord bot. Mainly waits for RabbitMQ messages to display stuff to users of my Discord.
+
+Heavily WIP and only does what I need. Feel free to take for whatever you want.
+This requires RabbitMQ and MariaDB/MySQL.
