@@ -18,11 +18,10 @@ internal class Config
         Password = "9d7wL6QTy8N",
     };
 
-    public DbConfig RedisConfig { get; set; } = new DbConfig
+    public DbConfig RabbitMQConfig { get; set; } = new DbConfig
     {
         Host = "vm",
         Port = 6379,
-        RedisDatabase = 0
     };
 
     public DiscordConfig DiscordConfig { get; set; }

@@ -1,6 +1,6 @@
-﻿namespace F1.Models.Redis;
+﻿namespace F1.Models.RabitMessage;
 
-public struct RedisRaceDocumentMessage
+public struct RaceDocumentMessage
 {
     public struct RaceDocumentPicture
     {

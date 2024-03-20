@@ -4,7 +4,7 @@ using DSharpPlus.EventArgs;
 using DSharpPlus.SlashCommands;
 using F1;
 using F1.Models;
-using F1.Models.Redis;
+using F1.Models.RabitMessage;
 using F1.Util;
 using F1Discord.SlashCommands;
 using F1Discord.Util;
@@ -50,6 +50,7 @@ public class App
             MinimumLogLevel = LogLevel.Debug
         };
 
+
 #if DEBUG
         discordConfig.Token = Cfg.DiscordConfig.DevSecret ?? Cfg.DiscordConfig.Secret;
 #else
@@ -65,7 +66,7 @@ public class App
         SlashCommandsExtension slash = Client.UseSlashCommands();
         slash.RegisterCommands<F1Commands>();
 
-        rabbitMQConnection = new RabbitMQConnection(Cfg.RedisConfig)
+        rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig)
             .Subscribe("F1.Manager.GrandPrixResync", async (GrandPrix gp) =>
             {
                 await onWeekendResync(gp);
@@ -82,7 +83,7 @@ public class App
             {
                 await onEventStart(ev);
             })
-            .Subscribe("F1.Document", async (RedisRaceDocumentMessage document) =>
+            .Subscribe("F1.Document", async (RaceDocumentMessage document) =>
             {
                 await onF1DocumentReceived(document);
             });
@@ -102,10 +103,10 @@ public class App
         return Task.CompletedTask;
     }
 
-    private static async Task onF1DocumentReceived(RedisRaceDocumentMessage redisRaceDocumentMessage)
+    private static async Task onF1DocumentReceived(RaceDocumentMessage raceDocumentMessage)
     {
         Dictionary<string, Stream> files = new Dictionary<string, Stream>();
-        foreach (RedisRaceDocumentMessage.RaceDocumentPicture documentPictureInfo in redisRaceDocumentMessage.Attachments)
+        foreach (RaceDocumentMessage.RaceDocumentPicture documentPictureInfo in raceDocumentMessage.Attachments)
         {
             string fileName = documentPictureInfo.PageName;
             byte[] data = documentPictureInfo.AttachmentData.Split('-').Select(b => Convert.ToByte(b, 16)).ToArray();
@@ -114,12 +115,12 @@ public class App
         }
 
         DiscordMessageBuilder builder = new DiscordMessageBuilder()
-                .WithContent($"{redisRaceDocumentMessage.RaceWeekName} - {redisRaceDocumentMessage.Name}")
+                .WithContent($"{raceDocumentMessage.RaceWeekName} - {raceDocumentMessage.Name}")
                 .AddFiles(files);
 
         foreach (DiscordChannel discordChannel in Channels.GetChannels())
         {
-            DiscordThreadChannel thread = await discordChannel.GetThread($"{redisRaceDocumentMessage.RaceWeekName} Documents");
+            DiscordThreadChannel thread = await discordChannel.GetThread($"{raceDocumentMessage.RaceWeekName} Documents");
             if (thread != null)
             {
                 await thread.SendMessageAsync(builder);

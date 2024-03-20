@@ -4,15 +4,13 @@
     "Password": null,
     "Username": "root",
     "Database": "f1",
-    "RedisDatabase": 0,
     "Debug": false
   },
-  "RedisConfig": {
+  "RabbitMQConfig": {
     "Host": "vm",
+    "Port": 5672,
     "Password": null,
-    "Username": null,
-    "Database": null,
-    "RedisDatabase": 0
+    "Username": null
   },
   "DiscordConfig": {
     "Secret":null,

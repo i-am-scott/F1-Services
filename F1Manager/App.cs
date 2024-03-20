@@ -19,7 +19,7 @@ internal class App
         Cfg = Config.Load("config.json");
 
         F1Db = new F1Db(Cfg.MySQLConfig);
-        rabbitMQConnection = new RabbitMQConnection(Cfg.RedisConfig);
+        rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig);
 
         if (!await F1Db.ConnectAsync())
         {
@@ -41,7 +41,7 @@ internal class App
         if ((selectedGp = currentGp ?? nextGp) != null)
         {
             rabbitMQConnection.Publish("F1.Manager.GrandPrixResync", selectedGp);
-            Console.WriteLine("Synced over redis");
+            Console.WriteLine("Synced over rabbitMQ");
         }
 
         ScheduleEvents(true);

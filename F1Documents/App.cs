@@ -1,5 +1,5 @@
 ﻿using F1;
-using F1.Models.Redis;
+using F1.Models.RabitMessage;
 using F1.Util;
 using F1Documents.Documents;
 
@@ -26,10 +26,10 @@ internal class App
     {
         Cfg = Config.Load("config.json");
         
-        rabbitMQConnection = new RabbitMQConnection(Cfg.RedisConfig);
+        rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig);
         documentProcessor.OnRaceDocumentFound += DocumentProcessor_OnRaceDocumentFound;
 
-        Task.WaitAll(Poll(), RedisStreaming());
+        Task.WaitAll(Poll(), documentStreaming());
     }
 
     private static void DocumentProcessor_OnRaceDocumentFound(RaceDocument obj)
@@ -51,7 +51,7 @@ internal class App
         });
     }
 
-    public static async Task RedisStreaming()
+    public static async Task documentStreaming()
     {
         await Task.Run(async () =>
         {
@@ -63,13 +63,13 @@ internal class App
                     continue;
                 }
 
-                IEnumerable<RedisRaceDocumentMessage.RaceDocumentPicture> attachments = document.DocumentPageImages.Select(kvp => new RedisRaceDocumentMessage.RaceDocumentPicture
+                IEnumerable<RaceDocumentMessage.RaceDocumentPicture> attachments = document.DocumentPageImages.Select(kvp => new RaceDocumentMessage.RaceDocumentPicture
                 {
                     PageName = kvp.Key,
                     AttachmentData = BitConverter.ToString(kvp.Value.ToArray())
                 });
 
-                RedisRaceDocumentMessage messageDocument = new RedisRaceDocumentMessage
+                RaceDocumentMessage messageDocument = new RaceDocumentMessage
                 {
                     Name = document.Name,
                     RaceWeekName = document.RaceWeekName,

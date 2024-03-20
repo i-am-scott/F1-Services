@@ -16,7 +16,6 @@
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="8.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="RestSharp" Version="110.2.1-alpha.0.3" />
-    <PackageReference Include="StackExchange.Redis" Version="2.7.23" />
   </ItemGroup>
 
   <Import Project="..\F1Models\F1Models.projitems" Label="Shared" />

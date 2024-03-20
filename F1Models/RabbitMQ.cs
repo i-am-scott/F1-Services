@@ -22,7 +22,8 @@ internal class RabbitMQConnection
     {
         ConnectionFactory connectionFactory = new ConnectionFactory
         {
-            HostName = cfg.Host
+            HostName = cfg.Host,
+            Port = cfg.Port
         };
 
         connection = connectionFactory.CreateConnection();

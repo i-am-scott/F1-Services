@@ -24,7 +24,7 @@ public class App
             return;
         }
 
-        rabbitMQConnection = new RabbitMQConnection(Cfg.RedisConfig);
+        rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig);
 
         await ConnectToWebSocket();
         await Task.Delay(-1);

@@ -17,7 +17,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)RabbitMQ.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\RaceSchedule.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\RaceType.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\Redis\RedisRaceDocumentMessage.cs" />
+    <Compile Include="..\F1Models\Models\Redis\RaceDocumentMessage.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\ScheduleStatus.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Config.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\DbConfig.cs" />
