@@ -1,0 +1,22 @@
+{
+  "MySQLConfig": {
+    "Host": "vm",
+    "Password": null,
+    "Username": "root",
+    "Database": "f1",
+    "RedisDatabase": 0,
+    "Debug": false
+  },
+  "RedisConfig": {
+    "Host": "vm",
+    "Password": null,
+    "Username": null,
+    "Database": null,
+    "RedisDatabase": 0
+  },
+  "DiscordConfig": {
+    "Secret":null,
+    "DevSecret":null,
+    "Webhook":null
+  }
+}
