@@ -18,7 +18,7 @@ internal class LiveTiming
     private static RestClient client => new RestClient(new RestClientOptions("https://livetiming.formula1.com/")
     {
         ThrowOnAnyError = true,
-        MaxTimeout = 5000
+        Timeout = TimeSpan.FromSeconds(3)
     });
 
     Dictionary<string, string> endpoints = new Dictionary<string, string>
