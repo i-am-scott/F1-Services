@@ -62,7 +62,7 @@ internal class App
 
         DateTime now = DateTime.UtcNow;
 
-#if DEBUG
+#if DEBUG && FAKETIMINGS
         double targetGpEnd = 300;
 #else
         double targetGpEnd = (targetGp.GetLastEventEndTime().AddMinutes(30) - now).TotalSeconds;
@@ -82,6 +82,7 @@ internal class App
         {
             // Message: race has ended!
             Log.Info($"Race weekend ended ${targetGp.name}");
+
             rabbitMQConnection.Publish("F1.Manager.GrandPrixEnd", targetGp);
             ScheduleEvents();
         });
@@ -90,7 +91,7 @@ internal class App
         int count = 1;
         foreach (GrandPrixSchedule schedule in targetGp.GrandPrixSchedules.OrderBy(s => s.start))
         {
-#if DEBUG
+#if DEBUG && FAKETIMINGS
             double raceStart = count++ * 60;
 #else
             double raceStart = (schedule.start - now).TotalSeconds;
