@@ -8,12 +8,47 @@ using RestSharp;
 namespace F1APIGenerator;
 
 // https://www.formula1.com/en/results.html/2023/races/1141/race-result.html
+// https://www.formula1.com/en/results.html/2024/races/1229/bahrain/race-result.html
+
+public class ResultRow
+{
+    public string? RaceResult { get; set; }
+
+    private Dictionary<string, string> Data = new Dictionary<string, string>();
+
+    public string this[string index]
+    {
+        get => Data[index];
+        set => Data[index] = value;
+    }
+
+    public bool TryGetValue(string key, out string value)
+    {
+        return Data.TryGetValue(key, out value);
+    }
+}
 
 internal class App
 {
     internal static Config Cfg;
-
     internal static F1Db F1Db;
+
+    internal static Dictionary<string, List<string>> RaceTableMap = new()
+    {
+        {
+            RaceResult.FP1,
+            new()
+            {
+                "POS",
+                "NO",
+                "DRIVER",
+                "CAR",
+                "TIME",
+                "GAP",
+                "LAPS",
+            }
+        }
+    };
 
     internal static RestClient client => new RestClient(new RestClientOptions("https://formula1.com/en/")
     {
@@ -25,10 +60,8 @@ internal class App
     {
         if (args.Length == 0)
         {
-            args = ["-races", "2024"];
+            args = ["-results", "2024", "1229"];
         }
-
-        Queue<string> startupParams = new Queue<string>(args);
 
         Cfg = Config.Load("config.json");
         F1Db = new F1Db(Cfg.MySQLConfig);
@@ -39,6 +72,7 @@ internal class App
             return;
         }
 
+        Queue<string> startupParams = new Queue<string>(args);
         string mode = startupParams.Dequeue();
 
         int year = 2024;
@@ -53,27 +87,40 @@ internal class App
                 startupParams.TryDequeue(out string? raceIdStr);
                 if (int.TryParse(raceIdStr, out int raceId))
                 {
-                    await GetRaceResults(year, raceId, RaceType.Race);
+                    await GetRaceResults(year, raceId, RaceResult.Race);
                 }
                 break;
         }
     }
 
-    static async Task GetRaceResults(int season, int raceid, RaceType raceType)
+    static async Task GetRaceResults(int season, int raceid, string resultType)
     {
-        string raceTypeToEndpoint = raceType switch
+        HtmlDocument? raceResults = await DownloadHTML($"results.html/{season}/races/{raceid}/race/{resultType}.html");
+        if (raceResults == null)
         {
-            RaceType.Qualifying => "qualifying",
-            RaceType.FP3 => "practice-3",
-            RaceType.FP2 => "practice-2",
-            RaceType.FP1 => "practice-1",
-            RaceType.Sprint => "sprint-results",
-            RaceType.SprintQualifying => "sprint-qualifying",
-            RaceType.SprintShootout => "sprint-shootout",
-            _ => "race-result"
-        };
+            Console.WriteLine("No results");
+            return;
+        }
 
-        HtmlDocument? raceResults = await DownloadHTML($"results.html/{season}/races/{raceid}/race/{raceTypeToEndpoint}.html");
+        HtmlNodeCollection nodes = raceResults.DocumentNode.SelectNodes("//table[contains(@class,'f1-table')]/tbody/tr");
+
+        foreach (HtmlNode node in nodes)
+        {
+            HtmlNodeCollection fields = node.SelectNodes("td");
+
+            string position = fields[0].InnerText;
+            string driverNumber = fields[1].InnerText;
+            string driverName = fields[2].SelectSingleNode(".//span").InnerText + " " + fields[2].SelectSingleNode(".//span[2]").InnerText;
+            string driverTicker = fields[2].SelectSingleNode(".//span[3]").InnerText;
+            string driverTeam = fields[3].InnerText;
+            string time = fields[4].InnerText;
+            string gap = fields[5].InnerText;
+            string points = fields[6].InnerText;
+
+            Console.WriteLine($"Position: {position}, Number: {driverNumber}, Name: {driverName} ({driverTicker}), Team: {driverTeam}, time: {time}");
+        }
+
+        Console.WriteLine("Results found!");
 
         await Task.CompletedTask;
     }
