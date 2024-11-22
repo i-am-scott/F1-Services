@@ -23,7 +23,9 @@ internal class RabbitMQConnection
         ConnectionFactory connectionFactory = new ConnectionFactory
         {
             HostName = cfg.Host,
-            Port = cfg.Port
+            Port = 5672,
+            UserName = cfg.Username,
+            Password = cfg.Password
         };
 
         connection = connectionFactory.CreateConnection();
@@ -35,27 +37,26 @@ internal class RabbitMQConnection
             return channel;
 
         channel = connection.CreateModel();
+
+        channel.QueueDeclare(queueName, false, false, false);
         channel.ExchangeDeclare(queueName, ExchangeType.Fanout);
 
         channels.Add(queueName, channel);
         return channel;
     }
 
-    public bool Publish(string queueName, object obj)
+    public bool Publish(string queueName, dynamic obj)
     {
         IModel channel = getQueue(queueName);
 
         string json = JsonSerializer.Serialize(obj, jsonSerializerOptions);
         byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
 
-        Console.WriteLine(json);
-
         channel.BasicPublish(exchange: queueName,
                              routingKey: string.Empty,
                              basicProperties: null,
                              body: jsonBytes);
 
-        Console.WriteLine($" [x] Sent {json}");
         return true;
     }
 
@@ -71,8 +72,6 @@ internal class RabbitMQConnection
         consumer.Received += (model, ea) =>
         {
             string body = Encoding.UTF8.GetString(ea.Body.ToArray());
-
-            Console.WriteLine(body);
 
             T? result = JsonSerializer.Deserialize<T>(body, jsonSerializerOptions);
 
