@@ -7,6 +7,6 @@ internal class DbConfig
     public string Username { set; get; }
     public string Database { set; get; }
 
-    public int Port = 3306;
+    public int Port { get; set; } = 3306;
     public bool Debug { get; set; } = false;
 }
