@@ -13,7 +13,12 @@ Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "F1Models", "F1Models\F1Mode
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "F1Documents", "F1Documents\F1Documents.csproj", "{496C11EC-B2A0-49F7-851A-6922F58EADA0}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "F1Manager", "F1Manager\F1Manager.csproj", "{E14B5D6C-1F56-4B26-8DF3-CF43E5737258}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "F1Manager", "F1Manager\F1Manager.csproj", "{E14B5D6C-1F56-4B26-8DF3-CF43E5737258}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{AAD2D126-4799-4F9E-8118-8176FA42F9F3}"
+	ProjectSection(SolutionItems) = preProject
+		.editorconfig = .editorconfig
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
