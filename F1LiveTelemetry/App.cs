@@ -8,9 +8,9 @@ namespace F1LiveTelemetry;
 
 public class App
 {
-    private static SignalRProcessor Socket;
-    private static RabbitMQConnection rabbitMQConnection;
-    private static F1Db F1Db;
+    private static SignalRProcessor? Socket;
+    private static RabbitMQConnection? rabbitMQConnection;
+    private static F1Db? F1Db;
 
     public static async Task Main(string[] args)
     {
@@ -32,7 +32,12 @@ public class App
 
     private static async Task ConnectToWebSocket()
     {
-        Socket = new SignalRProcessor(new Dictionary<string, string>()
+        if (rabbitMQConnection == null)
+        {
+            return;
+        }
+
+        Socket = new (new()
         {
             {"User-Agent", "BestHTTP"},
             {"Accept-Encoding", "gzip,identity"}
@@ -42,7 +47,7 @@ public class App
         };
 
         Socket.AddHub("Streaming");
-        Socket.OnFeed("RaceControlMessages", async (JsonElement element) =>
+        Socket.OnFeed("RaceControlMessages", (JsonElement element) =>
         {
             try
             {
@@ -66,17 +71,22 @@ public class App
         });
 
         await Socket.ConnectAsync("https://livetiming.formula1.com/signalr");
-        await Socket.SendAsync<LiveResponse>("Subscribe", new List<string>() {
-            "LapCount",
+        await Socket.SendAsync<LiveResponse>("Subscribe", new List<string>()
+        {
+            "DriverList",
+            "ExtrapolatedClock",
             "Heartbeat",
+            "LapCount",
             "RaceControlMessages",
-            "TrackStatus",
+            "RcmSeries",
+            "SessionData",
+            "SessionInfo",
             "TeamRadio",
             "TimingStats",
-            "WeatherData",
+            "TimingAppData",
             "TopThree",
-            "SessionInfo",
-            "DriverList"
+            "TrackStatus",
+            "WeatherData",
         });
     }
 }
