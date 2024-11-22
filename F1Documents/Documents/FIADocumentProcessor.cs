@@ -15,7 +15,9 @@ internal class FIADocumentProcessor
     protected readonly string BaseUrl = "https://www.fia.com";
     protected readonly string DocumentPage = "/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043";
 
-    internal event Action<RaceDocument> OnRaceDocumentFound;
+    internal event Action<RaceDocument>? OnRaceDocumentFound;
+
+    private bool firstAddedForTesting = false;
 
     internal async Task Poll()
     {
@@ -75,11 +77,19 @@ internal class FIADocumentProcessor
 
             Log.Info($"{raceDocument.Name} - {raceDocument.Date} - {App.Timings.Document}");
 
-            if (raceDocument.Date.CompareTo(App.Timings.Document) <= 0)
+#if DEBUG
+            if (firstAddedForTesting)
             {
-                Log.Info("- Document was skipped because it was too old.");
                 continue;
             }
+
+            firstAddedForTesting = true;
+#else
+            if (raceDocument.Date.CompareTo(App.Timings.Document) <= 0)
+            {
+                continue;
+            }
+#endif
 
             byte[] fileData = await raceDocument.Download(BaseUrl + raceDocument.DocumentPath);
             if (fileData?.Length == 0)
@@ -135,7 +145,7 @@ internal class FIADocumentProcessor
             return null;
         }
 
-        List<HtmlNode> listNodes = document.DocumentNode.SelectNodes("//ul[@class='event-wrapper'][1]//li[@class='document-row']").ToList();
+        List<HtmlNode> listNodes = document.DocumentNode.SelectNodes("//ul[@class='document-type-wrapper'][1]//li/ul/li").ToList();
         if (listNodes.Count == 0)
         {
             return null;
