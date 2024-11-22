@@ -6,11 +6,13 @@ using F1;
 using F1.Models;
 using F1.Models.RabitMessage;
 using F1.Util;
+using F1Discord.F1LiveTelemetry;
 using F1Discord.SlashCommands;
 using F1Discord.Util;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Timers;
 
 namespace F1Discord;
 
@@ -86,6 +88,10 @@ public class App
             .Subscribe("F1.Document", async (RaceDocumentMessage document) =>
             {
                 await onF1DocumentReceived(document);
+            })
+            .Subscribe("F1.RaceControlMessages", async (RaceControlMessage document) =>
+            {
+                await onRaceControlMessage(document);
             });
 
         await bot.ConnectAsync();
@@ -101,6 +107,29 @@ public class App
         Channels.TryGetChannel(e.Guild, out DiscordChannel _);
 
         return Task.CompletedTask;
+    }
+
+    private static async Task onRaceControlMessage(RaceControlMessage raceControlMessage)
+    {
+        if (raceControlMessage.Message.Contains("DELETED"))
+        {
+            return;
+        }
+
+        var timer = new System.Timers.Timer(45_000);
+        timer.Elapsed += async (object source, ElapsedEventArgs e) =>
+        {
+            if (!string.IsNullOrEmpty(raceControlMessage.Message))
+            {
+                foreach (DiscordChannel discordChannel in Channels.GetChannels())
+                {
+                    await discordChannel?.SendMessageAsync($":loudspeaker: {raceControlMessage.Message}");
+                }
+            }
+        };
+
+        timer.AutoReset = false;
+        timer.Enabled = true;
     }
 
     private static async Task onF1DocumentReceived(RaceDocumentMessage raceDocumentMessage)
