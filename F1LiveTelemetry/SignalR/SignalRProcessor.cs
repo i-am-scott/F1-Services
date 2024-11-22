@@ -48,12 +48,12 @@ public partial class SignalRProcessor
         }
     }
 
-    private void Disconnected(int status, string reason)
+    private async void Disconnected(int status, string reason)
     {
         Log.Info(status.ToString(), reason);
 
         invocationManager.ClearInvocationQueue();
-        Reconnect();
+        await Reconnect();
     }
 
     private async void MessageReceived(string message)
