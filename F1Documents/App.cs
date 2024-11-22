@@ -46,7 +46,7 @@ internal class App
             {
 
                 await documentProcessor.Poll();
-                await Task.Delay(20000);
+                await Task.Delay(Random.Shared.Next(3000, 6000));
             }
         });
     }
@@ -77,6 +77,8 @@ internal class App
                 };
 
                 rabbitMQConnection.Publish("F1.Document", messageDocument);
+                Console.WriteLine($" [x] Sent {messageDocument.Name}");
+
                 await Task.Delay(10000);
             }
         });
