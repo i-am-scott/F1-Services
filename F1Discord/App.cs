@@ -1,15 +1,17 @@
 ﻿using DSharpPlus;
+using DSharpPlus.Commands;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Commands.Processors.TextCommands;
 using DSharpPlus.Entities;
 using DSharpPlus.EventArgs;
-using DSharpPlus.SlashCommands;
 using F1;
 using F1.Models;
 using F1.Models.RabitMessage;
 using F1.Util;
 using F1Discord.F1LiveTelemetry;
-using F1Discord.SlashCommands;
 using F1Discord.Util;
 using Microsoft.Extensions.Logging;
+using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Timers;
@@ -22,7 +24,7 @@ public class App
 
     internal static DiscordClient Client;
     internal static DiscordWebhookClient clientWebhook = new DiscordWebhookClient();
-    internal static ILogger<BaseDiscordClient> Logger;
+    internal static ILogger Logger;
 
     internal static RabbitMQConnection rabbitMQConnection { get; set; }
     internal static JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
@@ -31,43 +33,8 @@ public class App
         ReferenceHandler = ReferenceHandler.Preserve
     };
 
-    public static async Task Main(string[] args)
+    public static void CreateRabbitMQ()
     {
-        Console.Title = "F1 Discord";
-
-        string configFile = args.FirstOrDefault() ?? "config.json";
-        Cfg = Config.Load(configFile);
-
-        if (Cfg is null || string.IsNullOrEmpty(Cfg.DiscordConfig.Secret))
-        {
-            Console.WriteLine($"There is no configuration set up. Please check {configFile}!");
-            await Task.Delay(2500);
-            return;
-        }
-
-        DiscordConfiguration discordConfig = new DiscordConfiguration()
-        {
-            TokenType = TokenType.Bot,
-            Intents = DiscordIntents.Guilds | DiscordIntents.GuildMessages | DiscordIntents.GuildPresences | DiscordIntents.MessageContents | DiscordIntents.AllUnprivileged,
-            MinimumLogLevel = LogLevel.Debug
-        };
-
-
-#if DEBUG
-        discordConfig.Token = Cfg.DiscordConfig.DevSecret ?? Cfg.DiscordConfig.Secret;
-#else
-        discordConfig.Token = Cfg.DiscordConfig.Secret;
-#endif
-
-        DiscordClient bot = new DiscordClient(discordConfig);
-
-        Client = bot;
-        Client.GuildAvailable += OnGuildAvailable;
-        Logger = bot.Logger;
-
-        SlashCommandsExtension slash = Client.UseSlashCommands();
-        slash.RegisterCommands<F1Commands>();
-
         rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig)
             .Subscribe("F1.Manager.GrandPrixResync", async (GrandPrix gp) =>
             {
@@ -93,20 +60,80 @@ public class App
             {
                 await onRaceControlMessage(document);
             });
+    }
 
-        await bot.ConnectAsync();
+    public static async Task Main(string[] args)
+    {
+        Console.Title = "F1 Discord";
+
+        string configFile = args.FirstOrDefault() ?? "config.json";
+        Cfg = Config.Load(configFile);
+
+        if (Cfg is null || string.IsNullOrEmpty(Cfg.DiscordConfig.Secret))
+        {
+            Console.WriteLine($"There is no configuration set up. Please check {configFile}!");
+            await Task.Delay(2500);
+            return;
+        }
+
+        CreateRabbitMQ();
+        AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+
+#if DEBUG
+        DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(Cfg.DiscordConfig.DevSecret ?? Cfg.DiscordConfig.Secret, DiscordIntents.All);
+#else
+        DiscordClientBuilder builder = DiscordClientBuilder.CreateDefault(Cfg.DiscordConfig.Secret, DiscordIntents.All);
+#endif
+
+        builder.UseCommands((IServiceProvider serviceProvider, CommandsExtension extension) =>
+        {
+            extension.AddCommands(Assembly.GetExecutingAssembly(), 292411419528265728);
+
+            TextCommandProcessor textCommandProcessor = new TextCommandProcessor(new TextCommandConfiguration
+            {
+                IgnoreBots = true,
+            });
+
+            SlashCommandProcessor slashCommands = new SlashCommandProcessor(new SlashCommandConfiguration
+            {
+                UnconditionallyOverwriteCommands = true
+            });
+
+            extension.AddProcessor(slashCommands);
+            extension.AddProcessor(textCommandProcessor);
+        }, new CommandsConfiguration
+        {
+            RegisterDefaultCommandProcessors = true,
+            DebugGuildId = 292411419528265728,
+        });
+
+        builder.ConfigureEventHandlers((EventHandlingBuilder eventBuilder) =>
+        {
+            eventBuilder.HandleGuildAvailable(Client_OnGuildAvailable);
+        });
+
+        DiscordClient bot = builder.Build();
+
+        Client = bot;
+        Logger = bot.Logger;
+
+        await bot.ConnectAsync(new DiscordActivity("Ferrari main", DiscordActivityType.Streaming), DiscordUserStatus.Online);
         await clientWebhook.AddWebhookAsync(Cfg.DiscordConfig.Webhook);
 
-        //await bot.DisconnectAsync();
         await Task.Delay(-1);
     }
 
-    private static Task OnGuildAvailable(DiscordClient sender, GuildCreateEventArgs e)
+    private static Task Client_OnGuildAvailable(DiscordClient sender, GuildAvailableEventArgs e)
     {
         Channels.RegisterGuild(e.Guild);
         Channels.TryGetChannel(e.Guild, out DiscordChannel _);
 
         return Task.CompletedTask;
+    }
+
+    private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        Log.Error($"Unhandled exception: {e}");
     }
 
     private static async Task onRaceControlMessage(RaceControlMessage raceControlMessage)
@@ -202,6 +229,11 @@ public class App
 
     private static async Task onEventStart(GrandPrixSchedule ev)
     {
+        if (ev == null)
+        {
+            return;
+        }
+
         string name = ev.grandprix.name.Replace("FORMULA 1 ", "");
         string eventName = ev.typestring;
 

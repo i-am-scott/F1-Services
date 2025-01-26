@@ -1,15 +1,31 @@
-﻿using DSharpPlus;
+﻿using DSharpPlus.Commands;
+using DSharpPlus.Commands.Processors.SlashCommands;
+using DSharpPlus.Commands.Processors.SlashCommands.ArgumentModifiers;
+using DSharpPlus.Commands.Trees;
 using DSharpPlus.Entities;
-using DSharpPlus.SlashCommands;
 using F1Discord.Util;
+using System.ComponentModel;
 
 namespace F1Discord.SlashCommands;
 
-[SlashCommandGroup("f1", "Formula 1 related commands")]
-internal class F1Commands : ApplicationCommandModule
+public class YearProvider : IChoiceProvider
 {
-    [SlashCommand("standings", "Get current or past championship standings", true)]
-    public async Task Standings(InteractionContext ctx, [Option("Year", "The season year"), Choice("2023", 2023), Choice("2022", 2022), Choice("2021", 2021)] long year = 2023)
+    private static readonly IEnumerable<DiscordApplicationCommandOptionChoice> seasonYears =
+    [
+        new DiscordApplicationCommandOptionChoice("Y2025Y", "2025"),
+    ];
+
+    ValueTask<IEnumerable<DiscordApplicationCommandOptionChoice>> IChoiceProvider.ProvideAsync(CommandParameter parameter)
+    {
+        return ValueTask.FromResult(seasonYears);
+    }
+}
+
+[Command("f1"), Description("Formula 1 related commands")]
+public static class F1Commands
+{
+    [Command("standings"), Description("Get current or past championship standings")]
+    public static async Task Standings(SlashCommandContext ctx, [Description("The season year"), SlashChoiceProvider<YearProvider>] int year = 2025)
     {
         /*await ctx.DeferAsync();
 
@@ -35,8 +51,8 @@ internal class F1Commands : ApplicationCommandModule
         }*/
     }
 
-    [SlashCommand("constructors", "Get current or past constructor standings", true)]
-    public async Task ConstructorStandings(InteractionContext ctx, [Option("Year", "The season year"), Choice("2023", 2023), Choice("2022", 2022), Choice("2021", 2021)] long year = 2023)
+    [Command("constructors"), Description("Get current or past constructor standings")]
+    public static async Task ConstructorStandings(SlashCommandContext ctx, [Description("The season year"), SlashChoiceProvider<YearProvider>] long year = 2025)
     {
         /*await ctx.DeferAsync();
 
@@ -61,8 +77,8 @@ internal class F1Commands : ApplicationCommandModule
         }*/
     }
 
-    [SlashCommand("schedule", "Get the schedule for this year", true)]
-    public async Task Events(InteractionContext ctx)
+    [Command("schedule"), Description("Get the schedule for this year")]
+    public static async Task Events(SlashCommandContext ctx)
     {
         /*await ctx.DeferAsync();
 
@@ -88,8 +104,8 @@ internal class F1Commands : ApplicationCommandModule
         }*/
     }
 
-    [SlashCommand("next", "Get the next events schedule", true)]
-    public async Task NextEvent(InteractionContext ctx)
+    [Command("next"), Description("Get the next events schedule")]
+    public static async Task NextEvent(SlashCommandContext ctx)
     {
         /*await ctx.DeferAsync();
 
@@ -111,24 +127,30 @@ internal class F1Commands : ApplicationCommandModule
         }*/
     }
 
-    [SlashCommand("previous", "Get the next events schedule", true)]
-    public async Task PreviousEvent(InteractionContext ctx)
+    [Command("previous"), Description("Get the next events schedule")]
+    public static async Task PreviousEvent(SlashCommandContext ctx)
     {
         //await ctx.DeferAsync();
         //await DisplayEvent(ctx, await ErgastF1.F1Api.GetPreviousRace());
     }
 
-
-    [SlashCommand("role", "Gives you the F1 role", true)]
-    public async Task F1GiveRole(InteractionContext ctx)
+    private static DiscordFollowupMessageBuilder Message = new DiscordFollowupMessageBuilder
     {
-        await ctx.DeferAsync();
+        IsEphemeral = true,
+    };
+
+    [Command("role"), Description("Gives you the F1 role")]
+    public static async Task F1GiveRole(SlashCommandContext ctx)
+    {
+        await ctx.DeferResponseAsync();
 
         DiscordRole role = ctx.Guild.Roles.Where(r => r.Value.Name == "Formula 1").FirstOrDefault().Value;
         if (role != null)
         {
+            Message.Content = "Role set!";
+
             await ctx.Member.GrantRoleAsync(role, "Formula 1 bot request");
-            await ctx.FollowUpAsync(new DiscordFollowupMessageBuilder().WithContent("Role set!").AsEphemeral());
+            await ctx.FollowupAsync(Message);
         }
         else
         {
@@ -137,7 +159,7 @@ internal class F1Commands : ApplicationCommandModule
     }
 
     #region Helpers
-    private async Task<DiscordMessage?> DisplayEvent(InteractionContext ctx)
+    private static async Task<DiscordMessage?> DisplayEvent(SlashCommandContext ctx)
     {
         return null;
 

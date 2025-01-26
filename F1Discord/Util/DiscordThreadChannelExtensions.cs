@@ -1,5 +1,4 @@
-﻿using DSharpPlus;
-using DSharpPlus.Entities;
+﻿using DSharpPlus.Entities;
 
 namespace F1Discord.Util;
 
@@ -15,7 +14,7 @@ internal static class DiscordThreadChannelExtensions
         else
         {
             DiscordMessage gpThread = await channel.SendMessageAsync(name);
-            return await channel.CreateThreadAsync(gpThread, name, AutoArchiveDuration.Week);
+            return await channel.CreateThreadAsync(gpThread, name, DiscordAutoArchiveDuration.Week);
         }
     }
 }
