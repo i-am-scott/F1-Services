@@ -1,6 +1,7 @@
 ﻿using F1.Contexts;
 using F1.Models;
 using F1.Util;
+
 using HtmlAgilityPack;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
@@ -30,8 +31,8 @@ public class ResultRow
 
 internal class App
 {
-    internal static Config Cfg;
-    internal static F1Db F1Db;
+    internal static Config? Cfg;
+    internal static F1Db? F1Db;
 
     internal static Dictionary<string, List<string>> RaceTableMap = new()
     {
@@ -53,18 +54,23 @@ internal class App
     internal static RestClient client => new RestClient(new RestClientOptions("https://formula1.com/en/")
     {
         ThrowOnAnyError = true,
-        MaxTimeout = 5000
+        Timeout = TimeSpan.FromSeconds(5)
     });
 
     static async Task Main(string[] args)
     {
         if (args.Length == 0)
         {
-            args = ["-results", "2024", "1229"];
+            args = ["-races"];
         }
 
         Cfg = Config.Load("config.json");
         F1Db = new F1Db(Cfg.MySQLConfig);
+
+        if (Cfg == null || F1Db == null)
+        {
+            return;
+        }
 
         if (!await F1Db.ConnectAsync())
         {
@@ -75,8 +81,11 @@ internal class App
         Queue<string> startupParams = new Queue<string>(args);
         string mode = startupParams.Dequeue();
 
-        int year = 2024;
-        int.TryParse(startupParams.Dequeue(), out year);
+        int year = DateTime.UtcNow.Year;
+        if (startupParams.TryDequeue(out string? yearStr))
+        {
+            int.TryParse(yearStr, out year);
+        }
 
         switch (mode)
         {
@@ -130,9 +139,13 @@ internal class App
         await F1Db.GrandsPrix.Where(gp => gp.season == season).ExecuteDeleteAsync();
 
         HtmlDocument? schedules = await DownloadHTML($"racing/{season}.html");
-        HtmlNodeCollection events = schedules.DocumentNode.SelectNodes("//a[contains(@class,'event-item-link')]");
+        if (schedules == null)
+        {
+            return;
+        }
 
-        int i = 0;
+        HtmlNodeCollection events = schedules.DocumentNode.SelectNodes("//a[contains(@href, '/en/racing/')][contains(@class, 'group')]");
+
         foreach (HtmlNode node in events)
         {
             string? gpName = node.Attributes["href"].Value.Split("/").LastOrDefault()?.Replace(".html", "");
@@ -190,6 +203,13 @@ internal class App
         await F1Db.SaveChangesAsync();
         Console.WriteLine("Grand Prix schedules created");
     }
+
+    // Drivers: https://api.formula1.com/v1/editorial-driverlisting/listing
+    // Specific event: https://api.formula1.com/v1/event-tracker/meeting/1253
+    // Current or next event: https://api.formula1.com/v1/event-tracker  
+    // Event schedules: https://api.formula1.com/v1/editorial-eventlisting/events?season=2025
+    // with apikey=BQ1SiSmLUOsp460VzXBlLrh689kGgYEZ
+    // Look for id with <meta name="apple-itunes-app" content="app-id=835022598, app-argument=https://www.formula1.com/championship/races/Bahrain.1253.html">
 
     static async Task<Race?> DownloadRace(int season, string raceName)
     {
@@ -249,6 +269,7 @@ internal class App
         Console.Error.WriteLine(message);
         Console.ForegroundColor = ConsoleColor.White;
     }
+
     public static void Error(string message)
     {
         Console.ForegroundColor = ConsoleColor.Red;
