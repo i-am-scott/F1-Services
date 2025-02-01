@@ -44,5 +44,33 @@ namespace F1.Util
 
             return null;
         }
+
+        private static string[] timeFormats = [
+            @"m\:s\.fff", 
+            @"h\:m\:s\.fff",
+            @"s\.ff",
+             @"s\.fff",
+            @"s\.f"
+        ];
+
+        public static uint ParseStopwatchToMilliseconds(this string input)
+        {
+            if (input == null)
+            {
+                return 0;
+            }
+
+            return (uint)TimeSpan.ParseExact(input, timeFormats, System.Globalization.CultureInfo.InvariantCulture).TotalMilliseconds;
+        }
+
+        public static uint ParseStopwatchToSeconds(this string input)
+        {
+            if (input == null)
+            {
+                return 0;
+            }
+
+            return (uint)TimeSpan.ParseExact(input, timeFormats, System.Globalization.CultureInfo.InvariantCulture).TotalSeconds;
+        }
     }
 }

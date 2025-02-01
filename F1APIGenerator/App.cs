@@ -1,67 +1,20 @@
 ﻿using F1.Contexts;
-using F1.Models;
 using F1.Util;
-
-using HtmlAgilityPack;
 using Microsoft.EntityFrameworkCore;
 using RestSharp;
 
 namespace F1APIGenerator;
 
-// https://www.formula1.com/en/results.html/2023/races/1141/race-result.html
-// https://www.formula1.com/en/results.html/2024/races/1229/bahrain/race-result.html
-
-public class ResultRow
-{
-    public string? RaceResult { get; set; }
-
-    private Dictionary<string, string> Data = new Dictionary<string, string>();
-
-    public string this[string index]
-    {
-        get => Data[index];
-        set => Data[index] = value;
-    }
-
-    public bool TryGetValue(string key, out string value)
-    {
-        return Data.TryGetValue(key, out value);
-    }
-}
-
 internal class App
 {
     internal static Config? Cfg;
-    internal static F1Db? F1Db;
-
-    internal static Dictionary<string, List<string>> RaceTableMap = new()
-    {
-        {
-            RaceResult.FP1,
-            new()
-            {
-                "POS",
-                "NO",
-                "DRIVER",
-                "CAR",
-                "TIME",
-                "GAP",
-                "LAPS",
-            }
-        }
-    };
-
-    internal static RestClient client => new RestClient(new RestClientOptions("https://formula1.com/en/")
-    {
-        ThrowOnAnyError = true,
-        Timeout = TimeSpan.FromSeconds(5)
-    });
+    internal static F1Db F1Db;
 
     static async Task Main(string[] args)
     {
         if (args.Length == 0)
         {
-            args = ["-races"];
+            args = ["-populate", "2024"];
         }
 
         Cfg = Config.Load("config.json");
@@ -81,199 +34,279 @@ internal class App
         Queue<string> startupParams = new Queue<string>(args);
         string mode = startupParams.Dequeue();
 
-        int year = DateTime.UtcNow.Year;
-        if (startupParams.TryDequeue(out string? yearStr))
+        uint season = (uint)DateTime.UtcNow.Year;
+        if (startupParams.TryDequeue(out string? seasonStr))
         {
-            int.TryParse(yearStr, out year);
+            uint.TryParse(seasonStr, out season);
         }
 
         switch (mode)
         {
-            case "-races":
-                await GetAllRaces(year);
+            case "-populate":
+                await GetAllDrivers(season);
+                await GetAllTeams(season);
+                await GetAllEvents(season);
+                await GetAllResults(season);
+                break;
+            case "-stage":
+                uint eventid = uint.Parse(startupParams.Dequeue());
+
+                await GetAllEvents(season);
+                await GetAllDrivers(season);
+                await GetAllTeams(season);
+                await GetEventResults(eventid);
                 break;
             case "-results":
-                startupParams.TryDequeue(out string? raceIdStr);
-                if (int.TryParse(raceIdStr, out int raceId))
-                {
-                    await GetRaceResults(year, raceId, RaceResult.Race);
-                }
+                await GetEventResults(season);
+                break;
+            case "-teams":
+            case "-constructors":
+                await GetAllTeams(season);
+                break;
+            case "-drivers":
+            case "-championship":
+                await GetAllDrivers(season);
+                break;
+            case "-races":
+            case "-events":
+                await GetAllEvents(season);
                 break;
         }
+
+        Console.ReadLine();
     }
 
-    static async Task GetRaceResults(int season, int raceid, string resultType)
+    static async Task GetAllResults(uint season)
     {
-        HtmlDocument? raceResults = await DownloadHTML($"results.html/{season}/races/{raceid}/race/{resultType}.html");
-        if (raceResults == null)
+        Requests.Success($"{season} Getting all event results");
+
+        List<F1.Models.Event> events = await F1Db.Events.Where(gp => gp.Season == season).ToListAsync();
+
+        foreach (F1.Models.Event e in events)
         {
-            Console.WriteLine("No results");
+            Requests.Success($"{e.Key} Collecting event results.");
+
+            await GetEventResults(e.Key);
+            await Task.Delay(500);
+        }
+
+        Requests.Success($"Event results completed!");
+    }
+
+    static async Task GetEventResults(uint meeting)
+    {
+        F1APIGenerator.Models.EventResults? eventResults = await Requests.GetEventResultAsync(meeting);
+        if (eventResults == null)
+        {
+            Requests.Error($"No event results found for meeting key {meeting}");
             return;
         }
 
-        HtmlNodeCollection nodes = raceResults.DocumentNode.SelectNodes("//table[contains(@class,'f1-table')]/tbody/tr");
+        await F1Db.EventResults.Where(r => r.EventKey == meeting).ExecuteDeleteAsync();
+        await F1Db.EventAwards.Where(a => a.EventKey == meeting).ExecuteDeleteAsync();
 
-        foreach (HtmlNode node in nodes)
+        Models.RaceresultsRace resultsRace = eventResults.raceResultsRace;
+
+        uint index = 0;
+        foreach (Models.Result result in resultsRace.results)
         {
-            HtmlNodeCollection fields = node.SelectNodes("td");
+            index++;
 
-            string position = fields[0].InnerText;
-            string driverNumber = fields[1].InnerText;
-            string driverName = fields[2].SelectSingleNode(".//span").InnerText + " " + fields[2].SelectSingleNode(".//span[2]").InnerText;
-            string driverTicker = fields[2].SelectSingleNode(".//span[3]").InnerText;
-            string driverTeam = fields[3].InnerText;
-            string time = fields[4].InnerText;
-            string gap = fields[5].InnerText;
-            string points = fields[6].InnerText;
-
-            Console.WriteLine($"Position: {position}, Number: {driverNumber}, Name: {driverName} ({driverTicker}), Team: {driverTeam}, time: {time}");
-        }
-
-        Console.WriteLine("Results found!");
-
-        await Task.CompletedTask;
-    }
-
-    static async Task GetAllRaces(int season)
-    {
-        await F1Db.GrandsPrix.Where(gp => gp.season == season).ExecuteDeleteAsync();
-
-        HtmlDocument? schedules = await DownloadHTML($"racing/{season}.html");
-        if (schedules == null)
-        {
-            return;
-        }
-
-        HtmlNodeCollection events = schedules.DocumentNode.SelectNodes("//a[contains(@href, '/en/racing/')][contains(@class, 'group')]");
-
-        foreach (HtmlNode node in events)
-        {
-            string? gpName = node.Attributes["href"].Value.Split("/").LastOrDefault()?.Replace(".html", "");
-            if (gpName == null || gpName.Contains("Testing"))
+            F1.Models.EventResult results = new F1.Models.EventResult
             {
-                continue;
-            }
-
-            Race? race = await DownloadRace(season, gpName);
-            if (race == null)
-            {
-                continue;
-            }
-
-            if (race.Schedules.Count == 0)
-            {
-                continue;
-            }
-
-            HtmlNode? descriptionNode = node.SelectSingleNode(".//div[@class='event-description']");
-            if (descriptionNode == null)
-            {
-                continue;
-            }
-
-            uint raceId = uint.Parse(node.Attributes["data-meetingkey"].Value);
-            string location = descriptionNode.SelectSingleNode(".//div[1]").InnerText;
-            string name = descriptionNode.SelectSingleNode(".//div[2]").InnerText;
-            string flag = node.SelectSingleNode(".//div[@class='country-flag']/picture/img").Attributes["data-src"].Value;
-
-            race.Id = raceId;
-            race.Name = name.Trim();
-            race.CircuitLocation = location.Trim();
-
-            GrandPrix gp = new GrandPrix
-            {
-                id = race.Id,
-                path = gpName,
-                name = race.Name,
-                season = season,
-                location = race.CircuitLocation,
-                location_flag = flag,
-                circuit = race.CircuitName,
-
-                GrandPrixSchedules = race.Schedules,
-                GrandPrixStats = race.Stats
+                Key = meeting + "_" + resultsRace.session + "_" + index,
+                EventKey = meeting,
+                DriverKey = result.driverKey,
+                Laps = result.lapsCompleted ?? 0,
+                Points = result.racePoints,
+                Position = index,
+                Time = result.raceTime.ParseStopwatchToMilliseconds()
             };
 
-            DateTime startTime = gp.GrandPrixSchedules.First().start.Date;
-            gp.weekend = startTime;
+            await F1Db.EventResults.AddAsync(results);
+        }
 
-            await F1Db.GrandsPrix.AddAsync(gp);
+        if (resultsRace.awards != null)
+        {
+            foreach (Models.Award award in resultsRace.awards)
+            {
+                F1.Models.EventAward dbAward = new F1.Models.EventAward
+                {
+                    Key = meeting + "_" + award.type,
+                    EventKey = meeting,
+                    Title = award.itemTitle,
+                    Winner = award.winnerName,
+                    RewardType = award.type,
+                    Time = award.winnerTime.ParseStopwatchToMilliseconds()
+                };
+
+                await F1Db.EventAwards.AddAsync(dbAward);
+            }
         }
 
         await F1Db.SaveChangesAsync();
-        Console.WriteLine("Grand Prix schedules created");
+        Requests.Success("Race results saved.");
     }
 
-    // Drivers: https://api.formula1.com/v1/editorial-driverlisting/listing
-    // Specific event: https://api.formula1.com/v1/event-tracker/meeting/1253
-    // Current or next event: https://api.formula1.com/v1/event-tracker  
-    // Event schedules: https://api.formula1.com/v1/editorial-eventlisting/events?season=2025
-    // with apikey=BQ1SiSmLUOsp460VzXBlLrh689kGgYEZ
-    // Look for id with <meta name="apple-itunes-app" content="app-id=835022598, app-argument=https://www.formula1.com/championship/races/Bahrain.1253.html">
-
-    static async Task<Race?> DownloadRace(int season, string raceName)
+    static async Task GetAllTeams(uint season)
     {
-        HtmlDocument? raceGp = await DownloadHTML($"racing/{season}/{raceName}.html");
-        if (raceGp == null)
+        F1APIGenerator.Models.ConstructorList? constructorList = await Requests.GetConstructorsAsync(season);
+        if (constructorList == null)
         {
-            Error("Race doc not valid!");
-            return default;
+            Requests.Error("No driver list was found.");
+            return;
         }
 
-        HtmlDocument? circuitRace = await DownloadHTML($"racing/{season}/{raceName}/Circuit.html");
-        if (circuitRace == null)
+        await F1Db.Teams.Where(d => d.Season == season).ExecuteDeleteAsync();
+        await F1Db.Constructors.Where(d => d.Season == season).ExecuteDeleteAsync();
+
+        foreach (F1APIGenerator.Models.Constructor constructor in constructorList.constructors)
         {
-            Error("Circuit doc not valid!");
-            return default;
-        }
-
-        Race race = new Race(raceGp, circuitRace)
-        {
-            Season = season
-        };
-
-        race.Load();
-
-        return race;
-    }
-
-    static async Task<HtmlDocument?> DownloadHTML(string endPoint)
-    {
-        RestRequest req = new RestRequest(endPoint);
-        req.Method = Method.Get;
-
-        try
-        {
-            RestResponse? response = await client.GetAsync(req);
-            if (response == null)
+            F1.Models.Team dbTeam = new F1.Models.Team
             {
-                return null;
+                Season = season,
+                Key = constructor.teamKey,
+                Name = constructor.teamName,
+                Color = constructor.teamColourCode,
+                Icon = constructor.teamNegativeLogoImage,
+                Profile = constructor.teamPageUrl
+            };
+
+            await F1Db.Constructors.AddAsync(new F1.Models.Constructor
+            {
+                Season = season,
+                TeamKey = constructor.teamKey,
+                Points = constructor.championshipPoints,
+                Position = constructor.positionValue
+            });
+
+            await F1Db.Teams.AddAsync(dbTeam);
+        }
+
+        await F1Db.SaveChangesAsync();
+        Requests.Success("Teams saved.");
+    }
+
+    static async Task GetAllDrivers(uint season)
+    {
+        F1APIGenerator.Models.DriverList? driverList = await Requests.GetDriversAsync(season);
+        if (driverList == null)
+        {
+            Requests.Error("No driver list was found.");
+            return;
+        }
+
+        await F1Db.Drivers.Where(d => d.Season == season).ExecuteDeleteAsync();
+        await F1Db.Championships.Where(c => c.Season == season).ExecuteDeleteAsync();
+
+        foreach (F1APIGenerator.Models.Driver driver in driverList.drivers)
+        {
+            if (!driver.racingNumber.HasValue)
+            {
+                continue;
             }
 
-            HtmlDocument html = new HtmlDocument();
-            html.LoadHtml(response.Content);
+            F1.Models.Driver dbDriver = new F1.Models.Driver
+            {
+                Season = season,
+                Key = driver.driverKey,
 
-            return html;
+                RacingNumber = driver.racingNumber.Value,
+
+                TeamKey = driver.teamKey,
+                TLA = driver.driverTLA,
+
+                FirstName = driver.driverFirstName,
+                LastName = driver.driverLastName,
+                Nationality = driver.driverCountry,
+
+                Image = driver.driverImage,
+                Profile = driver.driverPageUrl
+            };
+
+            await F1Db.Championships.AddAsync(new F1.Models.Championship
+            {
+                Season = season,
+                TeamKey = driver.teamKey,
+                DriverKey = driver.driverKey,
+                Points = driver.championshipPoints,
+                Position = driver.positionValue,
+            });
+
+            await F1Db.Drivers.AddAsync(dbDriver);
         }
-        catch (Exception ex)
+
+        await F1Db.SaveChangesAsync();
+        Requests.Success("Drivers saved.");
+    }
+
+    static async Task GetAllEvents(uint season)
+    {
+        F1APIGenerator.Models.EventList? events = await Requests.GetEventsAsync(season);
+        if (events == null)
         {
-            Error(ex.Message);
+            Requests.Error("No driver list was found.");
+            return;
         }
 
-        return null;
-    }
+        await F1Db.Events.Where(gp => gp.Season == season).ExecuteDeleteAsync();
 
-    public static void Success(string message)
-    {
-        Console.ForegroundColor = ConsoleColor.Green;
-        Console.Error.WriteLine(message);
-        Console.ForegroundColor = ConsoleColor.White;
-    }
+        foreach (Models.Event e in events.events)
+        {
+            uint meetingKey = e.meetingKey;
 
-    public static void Error(string message)
-    {
-        Console.ForegroundColor = ConsoleColor.Red;
-        Console.Error.WriteLine(message);
-        Console.ForegroundColor = ConsoleColor.White;
+            if (string.IsNullOrEmpty(e.meetingName))
+            {
+                continue;
+            }
+
+            F1.Models.Event dbGrandPrix = new F1.Models.Event
+            {
+                Season = season,
+                Key = meetingKey,
+                Name = e.meetingName,
+                OfficialName = e.meetingOfficialName,
+                Location = e.meetingIsoCountryName,
+                Start = e.meetingStartDate,
+                End = e.meetingEndDate,
+                TimeOffset = int.Parse(e.gmtOffset.Replace("+", "").Replace(":", "")),
+                Profile = e.url,
+                Circuit = e.circuitMediumImage,
+            };
+
+            await F1Db.Events.AddAsync(dbGrandPrix);
+
+            F1APIGenerator.Models.EventInfo? eventInfo = await Requests.GetEventAsync(meetingKey);
+            if (eventInfo == null)
+            {
+                Requests.Error($"Could not find specific event info for {meetingKey}.");
+                continue;
+            }
+
+            if (eventInfo.meetingContext == null)
+            {
+                Requests.Error($"No schedule context for {meetingKey}.");
+            }
+
+            await F1Db.EventSchedules.Where(es => es.EventKey == meetingKey).ExecuteDeleteAsync();
+
+            foreach (Models.Timetable timetable in eventInfo.meetingContext.timetables)
+            {
+                F1.Models.EventSchedule schedule = new F1.Models.EventSchedule
+                {
+                    Key = meetingKey + "_" + timetable.session + "_" + timetable.sessionNumber,
+                    EventKey = meetingKey,
+                    Session = timetable.description,
+                    Start = timetable.startTime,
+                    End = timetable.endTime,
+                    Status = timetable.state,
+                };
+
+                F1Db.EventSchedules.Add(schedule);
+            }
+        }
+
+        await F1Db.SaveChangesAsync();
+        Requests.Success("Grand Prix schedules saved.");
     }
 }

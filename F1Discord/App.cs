@@ -36,19 +36,19 @@ public class App
     public static void CreateRabbitMQ()
     {
         rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig)
-            .Subscribe("F1.Manager.GrandPrixResync", async (GrandPrix gp) =>
+            .Subscribe("F1.Manager.GrandPrixResync", async (Event gp) =>
             {
                 await onWeekendResync(gp);
             })
-            .Subscribe("F1.Manager.EventScheduled", async (GrandPrix gp) =>
+            .Subscribe("F1.Manager.EventScheduled", async (Event gp) =>
             {
                 await onWeekendScheduled(gp);
             })
-            .Subscribe("F1.Manager.GrandPrixEnd", async (GrandPrix gp) =>
+            .Subscribe("F1.Manager.GrandPrixEnd", async (Event gp) =>
             {
                 await onWeekendEnd(gp);
             })
-            .Subscribe("F1.Manager.EventStart", async (GrandPrixSchedule ev) =>
+            .Subscribe("F1.Manager.EventStart", async (EventSchedule ev) =>
             {
                 await onEventStart(ev);
             })
@@ -184,20 +184,7 @@ public class App
         }
     }
 
-    private static void displayStats(DiscordEmbedBuilder embedBuilder, GrandPrix gp)
-    {
-        if (gp.GrandPrixStats == null || gp.GrandPrixStats.Count == 0)
-        {
-            return;
-        }
-
-        foreach (GrandPrixStat stat in gp.GrandPrixStats)
-        {
-            embedBuilder.AddField(stat.name, stat.value, true);
-        }
-    }
-
-    private static async Task onWeekendResync(GrandPrix gp)
+    private static async Task onWeekendResync(Event gp)
     {
         DateTime startTime = gp.GetFirstEventStartTime();
         string startTimeFormatLong = Formatter.Timestamp(startTime, TimestampFormat.LongDateTime);
@@ -205,49 +192,48 @@ public class App
 
         Console.WriteLine("Write WEEKEND RESYNC");
 
-        await Channels.SetTitle($"{gp.name} {startTimeFormatRelative} ({startTimeFormatLong})");
+        await Channels.SetTitle($"{gp.Name} {startTimeFormatRelative} ({startTimeFormatLong})");
     }
 
-    private static async Task onWeekendScheduled(GrandPrix gp)
+    private static async Task onWeekendScheduled(Event gp)
     {
         DateTime startTime = gp.GetFirstEventStartTime();
         string startTimeFormatLong = Formatter.Timestamp(startTime, TimestampFormat.LongDateTime);
         string startTimeFormatRelative = Formatter.Timestamp(startTime, TimestampFormat.RelativeTime);
 
-        await Channels.SetTitle($"{gp.name} {startTimeFormatRelative} ({startTimeFormatLong})");
+        await Channels.SetTitle($"{gp.Name} {startTimeFormatRelative} ({startTimeFormatLong})");
 
-        string name = gp.name.Replace("FORMULA 1 ", "");
+        string name = gp.Name.Replace("FORMULA 1 ", "");
         DiscordEmbedBuilder embed = new DiscordEmbedBuilder()
-            .WithAuthor(name, gp.f1url, gp.location_flag)
+            //.WithAuthor(name, gp.Profile, gp.Location)
             .WithTitle($"The next Grand Prix is scheduled for {startTimeFormatLong}. See you {startTimeFormatRelative}!")
-            .WithImageUrl(gp.circuit_url)
+            .WithImageUrl(gp.Circuit)
             .WithColor(DiscordColor.Green);
 
-        displayStats(embed, gp);
         await Channels.WriteEmbed(embed, "<@&1015996154921631754>");
     }
 
-    private static async Task onEventStart(GrandPrixSchedule ev)
+    private static async Task onEventStart(EventSchedule ev)
     {
         if (ev == null)
         {
             return;
         }
 
-        string name = ev.grandprix.name.Replace("FORMULA 1 ", "");
-        string eventName = ev.typestring;
+        string name = ev.Event.Name;
+        string eventName = ev.SessionTypeString;
 
-        Console.WriteLine(ev.grandprix.circuit_url);
+        Console.WriteLine(ev.Event.Circuit);
 
         DiscordEmbedBuilder embed = new DiscordEmbedBuilder()
-            .WithAuthor(name, ev.grandprix.f1url, ev.grandprix.location_flag)
+            //.WithAuthor(name, ev.grandprix.Profile, ev.grandprix.location_flag)
             .WithTitle($"{eventName} started!")
             .WithColor(DiscordColor.Red);
 
         await Channels.WriteEmbed(embed, "<@&1015996154921631754>");
     }
 
-    private static async Task onWeekendEnd(GrandPrix gp)
+    private static async Task onWeekendEnd(Event gp)
     {
         Console.WriteLine("OnWeekendEnd");
     }

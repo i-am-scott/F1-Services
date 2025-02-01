@@ -10,19 +10,24 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)Contexts\F1Db.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\Championship.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\Constructor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\Driver.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\GrandPrix.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\GrandPrixStat.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\NationalityEnum.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\Enums\RewardType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\Enums\SessionType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\EventAward.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\EventResult.cs" />
+    <Compile Include="..\F1Models\Models\Event.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\Enums\LocationEnum.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\Team.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)RabbitMQ.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\RaceSchedule.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Models\RaceType.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Models\EventSchedule.cs" />
     <Compile Include="..\F1Models\Models\Redis\RaceDocumentMessage.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Models\ScheduleStatus.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Config.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\DbConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\DiscordConfig.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Util\DriverNationality.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\JsonConverters.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\Log.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\RestClientExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\StringExtensions.cs" />

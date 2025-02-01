@@ -33,9 +33,9 @@ internal class App
 
     private static async Task StartupRaceSchedule()
     {
-        GrandPrix? currentGp = await F1Db.GetCurrentGrandPrixAsync();
-        GrandPrix? nextGp = await F1Db.GetNextGrandPrix();
-        GrandPrix? selectedGp;
+        Event? currentGp = await F1Db.GetCurrentGrandPrixAsync();
+        Event? nextGp = await F1Db.GetNextGrandPrix();
+        Event? selectedGp;
 
         // Update current race for Discord title.
         if ((selectedGp = currentGp ?? nextGp) != null)
@@ -49,7 +49,7 @@ internal class App
 
     private static async void ScheduleEvents(bool skipSchedule = false)
     {
-        GrandPrix? targetGp = await F1Db.GetNextGrandPrix();
+        Event? targetGp = await F1Db.GetNextGrandPrix();
 
         // Season ended?
         if (targetGp == null)
@@ -58,7 +58,7 @@ internal class App
             return;
         }
 
-        Log.Info($"Starting timers for {targetGp.name} ({targetGp.weekend})");
+        Log.Info($"Starting timers for {targetGp.Name} ({targetGp.Weekend})");
 
         DateTime now = DateTime.UtcNow;
 
@@ -70,10 +70,10 @@ internal class App
 
         if (!skipSchedule)
         {
-            GrandPrix? currentGrandPrix = await F1Db.GetCurrentGrandPrixAsync();
+            Event? currentGrandPrix = await F1Db.GetCurrentGrandPrixAsync();
             if (currentGrandPrix == null)
             {
-                Log.Info($"Next race weekend updated to {targetGp.name}.");
+                Log.Info($"Next race weekend updated to {targetGp.Name}.");
                 rabbitMQConnection.Publish("F1.Manager.EventScheduled", targetGp);
             }
         }
@@ -81,7 +81,7 @@ internal class App
         simpleTimer("GPEnd", targetGpEnd, async () =>
         {
             // Message: race has ended!
-            Log.Info($"Race weekend ended ${targetGp.name}");
+            Log.Info($"Race weekend ended ${targetGp.Name}");
 
             rabbitMQConnection.Publish("F1.Manager.GrandPrixEnd", targetGp);
             ScheduleEvents();
@@ -89,15 +89,15 @@ internal class App
 
         // Announce all race events.
         int count = 1;
-        foreach (GrandPrixSchedule schedule in targetGp.GrandPrixSchedules.OrderBy(s => s.start))
+        foreach (EventSchedule schedule in targetGp.EventSchedules.OrderBy(s => s.Start))
         {
 #if DEBUG && FAKETIMINGS
             double raceStart = count++ * 60;
 #else
-            double raceStart = (schedule.start - now).TotalSeconds;
+            double raceStart = (schedule.Start - now).TotalSeconds;
 #endif
 
-            simpleTimer("Event_" + schedule.type.ToString(), raceStart, async () =>
+            simpleTimer("Event_" + schedule.SessionTypeString, raceStart, async () =>
             {
                 string eventJson = schedule.ToJson();
                 rabbitMQConnection.Publish("F1.Manager.EventStart", targetGp);

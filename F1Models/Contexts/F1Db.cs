@@ -11,8 +11,16 @@ internal class F1Db : DbContext
 
     public DbSet<Driver> Drivers { get; set; }
 
-    public DbSet<GrandPrix> GrandsPrix { get; set; }
-    public DbSet<GrandPrixSchedule> GrandPrixSchedules { get; set; }
+    public DbSet<Team> Teams { get; set; }
+    public DbSet<Constructor> Constructors { get; set; }
+
+    public DbSet<Championship> Championships { get; set; }
+
+    public DbSet<Event> Events { get; set; }
+    public DbSet<EventSchedule> EventSchedules { get; set; }
+
+    public DbSet<EventAward> EventAwards { get; set; }
+    public DbSet<EventResult> EventResults { get; set; }
 
     public F1Db(DbConfig config)
     {
@@ -53,34 +61,31 @@ internal class F1Db : DbContext
         optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
     }
 
-    internal async Task<GrandPrix?> GetLastGrandPrixAsync()
+    internal async Task<Event?> GetLastGrandPrixAsync()
     {
         DateTime dateNow = DateTime.UtcNow.Date;
-        List<GrandPrix> grandsPrix = await GrandsPrix.Where(g => g.weekend < dateNow && g.weekend.AddDays(3) < dateNow)
-            .Include(g => g.GrandPrixSchedules)
-            .Include(g => g.GrandPrixStats)
-            .OrderBy(g => g.weekend)
-            .OrderByDescending(g => g.weekend)
+        List<Event> grandsPrix = await Events.Where(g => g.Weekend < dateNow && g.WeekendEnd < dateNow)
+            .Include(g => g.EventSchedules)
+            .OrderByDescending(g => g.Weekend)
             .Take(1)
             .ToListAsync();
 
         return grandsPrix.LastOrDefault();
     }
 
-    internal async Task<GrandPrix?> GetCurrentGrandPrixAsync()
+    internal async Task<Event?> GetCurrentGrandPrixAsync()
     {
         DateTime dateNow = DateTime.UtcNow.Date;
-        List<GrandPrix> grandsPrix = await GrandsPrix.Where(g => (dateNow >= g.weekend) && (dateNow < g.weekend.AddDays(3)))
-            .Include(g => g.GrandPrixSchedules)
-            .Include(g => g.GrandPrixStats)
-            .OrderBy(g => g.weekend)
+        List<Event> grandsPrix = await Events.Where(g => (dateNow >= g.Weekend) && (dateNow < g.WeekendEnd))
+            .Include(g => g.EventSchedules)
+            .OrderBy(g => g.Weekend)
             .Take(1)
             .ToListAsync();
 
         return grandsPrix.LastOrDefault();
     }
 
-    internal async Task<GrandPrix?> GetNextGrandPrix(GrandPrix? current = null)
+    internal async Task<Event?> GetNextGrandPrix(Event? current = null)
     {
         current ??= await GetCurrentGrandPrixAsync() ?? await GetLastGrandPrixAsync();
         if (current == null)
@@ -88,15 +93,14 @@ internal class F1Db : DbContext
             return default;
         }
 
-        return await GrandsPrix.Where(g => g.id > current.id)
-            .Include(g => g.GrandPrixSchedules)
-            .Include(g => g.GrandPrixStats)
+        return await Events.Where(g => g.Key > current.Key && g.Season == current.Season)
+            .Include(g => g.EventSchedules)
             .Take(1)
             .FirstOrDefaultAsync();
     }
 
-    internal async Task<List<GrandPrix>?> GetSchedule(int year = 2024)
+    internal async Task<List<Event>> GetSchedule(int year = 2025)
     {
-        return await GrandsPrix.Where(g => g.season == year).Include(g => g.GrandPrixSchedules).ToListAsync();
+        return await Events.Where(g => g.Season == year).Include(g => g.EventSchedules).ToListAsync();
     }
 }

@@ -69,11 +69,11 @@ public class NewsProcessor
         Log.Info($"Current Time - {DateTime.Now}");
     }
 
-    protected async Task<List<SkyNewsItem>> GetLatestSkyNews()
+    protected async Task<List<SkyNewsItem>?> GetLatestSkyNews()
     {
         HtmlDocument document = await SkyNewsUrl.DownloadHTML();
 
-        List<HtmlNode> listNodes = document.DocumentNode.SelectNodes("/html/body/div[4]/div/div[1]/div[3]/div[1]/div[2]/div/div/div")?.ToList();
+        List<HtmlNode>? listNodes = document.DocumentNode.SelectNodes("/html/body/div[4]/div/div[1]/div[3]/div[1]/div[2]/div/div/div")?.ToList();
         if (listNodes == null || listNodes.Count == 0)
         {
             return null;

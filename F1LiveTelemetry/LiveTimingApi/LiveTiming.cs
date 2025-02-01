@@ -59,7 +59,7 @@ internal class LiveTiming
 
     internal async Task<LiveTimingSession?> GetGrandPrix(int year, string gp)
     {
-        List<GrandPrix>? grandsPrix = await f1Db.GetSchedule();
+        List<Event>? grandsPrix = await f1Db.GetSchedule();
         if (grandsPrix == null)
         {
             return default;
