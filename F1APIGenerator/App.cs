@@ -14,7 +14,7 @@ internal class App
     {
         if (args.Length == 0)
         {
-            args = ["-populate", "2024"];
+            args = ["-populate", DateTime.UtcNow.Year.ToString()];
         }
 
         Cfg = Config.Load("config.json");
@@ -260,6 +260,8 @@ internal class App
                 continue;
             }
 
+            int timeoffset = int.Parse(e.gmtOffset.Replace("+", "").Split(':').First());
+
             F1.Models.Event dbGrandPrix = new F1.Models.Event
             {
                 Season = season,
@@ -267,9 +269,9 @@ internal class App
                 Name = e.meetingName,
                 OfficialName = e.meetingOfficialName,
                 Location = e.meetingIsoCountryName,
-                Start = e.meetingStartDate,
-                End = e.meetingEndDate,
-                TimeOffset = int.Parse(e.gmtOffset.Replace("+", "").Replace(":", "")),
+                Start = e.meetingStartDate.AddHours(-timeoffset),
+                End = e.meetingEndDate.AddHours(-timeoffset),
+                TimeOffset = timeoffset,
                 Profile = e.url,
                 Circuit = e.circuitMediumImage,
             };
@@ -297,8 +299,8 @@ internal class App
                     Key = meetingKey + "_" + timetable.session + "_" + timetable.sessionNumber,
                     EventKey = meetingKey,
                     Session = timetable.description,
-                    Start = timetable.startTime,
-                    End = timetable.endTime,
+                    Start = timetable.startTime.AddHours(-timeoffset),
+                    End = timetable.endTime.AddHours(-timeoffset),
                     Status = timetable.state,
                 };
 
