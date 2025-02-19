@@ -25,6 +25,10 @@ internal class EventSchedule
         SessionType.Sprint => "Sprint",
         SessionType.SprintQualifying => "Sprint Qualifying",
         SessionType.SprintShootout => "Sprint Shootout",
+        SessionType.Day1 => "Testing Day 1",
+        SessionType.Day2 => "Testing Day 2",
+        SessionType.Day3 => "Testing Day 3",
+        SessionType.UNKNOWN => "UNKNOWN",
         _ => "Race"
     };
 
