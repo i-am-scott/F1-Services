@@ -26,7 +26,6 @@ public class Driver
     public uint positionNumber { get; set; }
     public uint championshipPoints { get; set; }
 
-    public string? dalTeamDriverOrder { get; set; } // Driver 1 or 2
     public string driverFirstName { get; set; }
     public string driverLastName { get; set; }
     public string driverReference { get; set; } // REFID LANNOR01
