@@ -1,17 +1,18 @@
 ### Formula 1 Services
 
 Contains different apps for collecting and using F1 data.
-Scrapes the official F1 website for current season data.
+Uses the F1 API and f1timings live data.
 
 #### F1APIGenerator
-- Collects information from the F1 website.
+- Collects information from the F1 APIs and stores them in MySQL.
 
 #### F1Documents
-- Downloads FIA Documents for race events.
-- Checks for new news articles from Sky & BBC.
+- Downloads and stores FIA Documents for race events and broadcasts over RabbitMQ.
+- Checks for new news articles from Sky & BBC and broadcasts meta info over RabbitMQ.
 
 #### F1LiveTelemetry
 - Connects to the F1 Livetimings websocket to get live information about racing events.
+- Re-formats and broadcasts over RabbitMQ for other services to consume.
 
 #### F1Manager
 - Triggers actions based on race weekend ends and starting.
@@ -21,4 +22,4 @@ Scrapes the official F1 website for current season data.
 - The discord bot. Mainly waits for RabbitMQ messages to display stuff to users of my Discord.
 
 Heavily WIP and only does what I need. Feel free to take for whatever you want.
-This requires RabbitMQ and MariaDB/MySQL.
+Requires RabbitMQ and MariaDB/MySQL.
