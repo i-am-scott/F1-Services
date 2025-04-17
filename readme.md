@@ -1,14 +1,14 @@
 ### Formula 1 Services
-#### Heavily WIP for-fun project.
+
+Heavily WIP for-fun project.
+Contains different apps for collecting and using F1 data.
+Uses the F1 API and f1timings live data.
 
 ### Requirements
 - MySQL/MariaDB
 - RedditMQ
 - .NET 9.0
 - Ghostscript.NET for PDF to PNG conversion.
-
-Contains different apps for collecting and using F1 data.
-Uses the F1 API and f1timings live data.
 
 #### F1APIGenerator
 - Collects information from the F1 APIs and stores them in MySQL.
