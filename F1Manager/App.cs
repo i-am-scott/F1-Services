@@ -58,7 +58,7 @@ internal class App
             return;
         }
 
-        Log.Info($"Starting timers for {targetGp.Name} ({targetGp.Weekend})");
+        Log.Info($"Starting timers for {targetGp.Name} ({targetGp.Start})");
 
         DateTime now = DateTime.UtcNow;
 
@@ -89,6 +89,7 @@ internal class App
 
         // Announce all race events.
         int count = 1;
+
         foreach (EventSchedule schedule in targetGp.EventSchedules.OrderBy(s => s.Start))
         {
 #if DEBUG && FAKETIMINGS
