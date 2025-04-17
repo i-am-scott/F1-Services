@@ -31,7 +31,7 @@ internal class Event
     public bool IsCurrentWeekend()
     {
         DateTime dateTime = DateTime.UtcNow.Date;
-        return dateTime >= Start && dateTime < End.AddHours(1);
+        return dateTime >= Start.AddHours(-1) && dateTime < End.AddHours(1);
     }
 
     public EventSchedule? GetLastEvent()
