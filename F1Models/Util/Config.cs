@@ -10,21 +10,9 @@ public struct F1
 
 internal class Config
 {
-    public DbConfig MySQLConfig { get; set; } = new DbConfig
-    {
-        Host = "vm",
-        Database = "f1",
-        Username = "root",
-        Password = "9d7wL6QTy8N",
-    };
+    public DbConfig MySQLConfig { get; set; }
 
-    public DbConfig RabbitMQConfig { get; set; } = new DbConfig
-    {
-        Host = "vm",
-        Port = 6379,
-    };
-
-    public DiscordConfig DiscordConfig { get; set; }
+    public DbConfig RabbitMQConfig { get; set; }
 
     public F1 Formula1 { get; set; }
 
