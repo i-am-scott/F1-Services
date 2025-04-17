@@ -1,4 +1,11 @@
 ### Formula 1 Services
+#### Heavily WIP for-fun project.
+
+### Requirements
+- MySQL/MariaDB
+- RedditMQ
+- .NET 9.0
+- Ghostscript.NET for PDF to PNG conversion.
 
 Contains different apps for collecting and using F1 data.
 Uses the F1 API and f1timings live data.
@@ -20,6 +27,3 @@ Uses the F1 API and f1timings live data.
 
 #### F1Discord
 - The discord bot. Mainly waits for RabbitMQ messages to display stuff to users of my Discord.
-
-Heavily WIP and only does what I need. Feel free to take for whatever you want.
-Requires RabbitMQ and MariaDB/MySQL.
