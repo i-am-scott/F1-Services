@@ -64,9 +64,9 @@ internal class F1Db : DbContext
     internal async Task<Event?> GetLastGrandPrixAsync()
     {
         DateTime dateNow = DateTime.UtcNow.Date;
-        List<Event> grandsPrix = await Events.Where(g => g.Weekend < dateNow && g.WeekendEnd < dateNow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start < dateNow && g.End < dateNow)
             .Include(g => g.EventSchedules)
-            .OrderByDescending(g => g.Weekend)
+            .OrderByDescending(g => g.Start)
             .Take(1)
             .ToListAsync();
 
@@ -76,9 +76,9 @@ internal class F1Db : DbContext
     internal async Task<Event?> GetCurrentGrandPrixAsync()
     {
         DateTime dateNow = DateTime.UtcNow.Date;
-        List<Event> grandsPrix = await Events.Where(g => (dateNow >= g.Weekend) && (dateNow < g.WeekendEnd))
+        List<Event> grandsPrix = await Events.Where(g => (dateNow >= g.Start) && (dateNow < g.End))
             .Include(g => g.EventSchedules)
-            .OrderBy(g => g.Weekend)
+            .OrderBy(g => g.Start)
             .Take(1)
             .ToListAsync();
 
@@ -93,7 +93,7 @@ internal class F1Db : DbContext
             return default;
         }
 
-        return await Events.Where(g => g.Key > current.Key && g.Season == current.Season)
+        return await Events.Where(g => g.Key > current.Key)
             .Include(g => g.EventSchedules)
             .Take(1)
             .FirstOrDefaultAsync();
