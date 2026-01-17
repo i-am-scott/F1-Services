@@ -1,0 +1,10 @@
+{
+	"profiles": {
+		"F1.APIGenerator": {
+			"commandName": "Project"
+		},
+		"Container (Dockerfile)": {
+			"commandName": "Docker"
+		}
+	}
+}

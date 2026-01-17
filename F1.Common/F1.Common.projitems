@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>f57823c8-0b04-4d8a-9ae3-381f73e18025</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>F1.Common</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)RabbitMQ.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Config.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\DbConfig.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\DiscordConfig.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\JsonConverters.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Log.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\RestClientExtensions.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\StringExtensions.cs" />
+  </ItemGroup>
+</Project>

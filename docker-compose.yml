@@ -1,0 +1,6 @@
+services:
+  f1apigenerator:
+    image: ${DOCKER_REGISTRY-}f1apigenerator
+    build:
+      context: .
+      dockerfile: F1APIGenerator/Dockerfile
