@@ -1,6 +1,9 @@
 ﻿using F1.Common;
-using F1.Documents.Documents;
-using F1.Models.RabbitMQ;
+using F1.Common.AppBus;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace F1.Documents;
 
@@ -13,73 +16,35 @@ namespace F1.Documents;
 
 internal class App
 {
-	private static Config Cfg { get; set; }
-	private readonly static FIADocumentProcessor documentProcessor = new FIADocumentProcessor();
+    internal readonly static Timings Timings = new Timings();
 
-	internal readonly static Timings Timings = new Timings();
-	internal readonly static Queue<RaceDocument> documentQueue = new Queue<RaceDocument>();
+    static async Task Main(string[] args)
+    {
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+        builder.Configuration
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+            .AddEnvironmentVariables()
+            .AddCommandLine(args);
 
-	internal static RabbitMQConnection rabbitMQConnection { get; set; }
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
 
-	public static async Task Main(string[] args)
-	{
-		Cfg = Config.Load();
+        builder.Services.Configure<RabbitMQConfig>(builder.Configuration.GetSection("RabbitMQ"));
 
-		rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig);
-		documentProcessor.OnRaceDocumentFound += DocumentProcessor_OnRaceDocumentFound;
+        builder.Services.AddHttpClient();
 
-		Task.WaitAll(Poll(), documentStreaming());
-	}
+        builder.Services.AddSingleton<RabbitMQConnectionService>();
+        builder.Services.AddHostedService<RabbitMQConnectionService>();
 
-	private static void DocumentProcessor_OnRaceDocumentFound(RaceDocument obj)
-	{
-		Log.Info(obj.Name + " document ready for upload.");
-		documentQueue.Enqueue(obj);
-	}
+        builder.Services.AddSingleton<IAppBus<RaceDocument>, AppBus<RaceDocument>>();
 
-	public static async Task Poll()
-	{
-		await Task.Run(async () =>
-		{
-			while (true)
-			{
+        builder.Services.AddHostedService<DocumentConsumer>();
+        builder.Services.AddHostedService<DocumentPoller>();
+        
+        using IHost host = builder.Build();
 
-				await documentProcessor.Poll();
-				await Task.Delay(Random.Shared.Next(3000, 6000));
-			}
-		});
-	}
-
-	public static async Task documentStreaming()
-	{
-		await Task.Run(async () =>
-		{
-			while (true)
-			{
-				if (!documentQueue.TryDequeue(out RaceDocument? document))
-				{
-					await Task.Delay(500);
-					continue;
-				}
-
-				IEnumerable<RaceDocumentMessage.RaceDocumentPicture> attachments = document.DocumentPageImages.Select(kvp => new RaceDocumentMessage.RaceDocumentPicture
-				{
-					PageName = kvp.Key,
-					AttachmentData = BitConverter.ToString(kvp.Value.ToArray())
-				});
-
-				RaceDocumentMessage messageDocument = new RaceDocumentMessage
-				{
-					Name = document.Name,
-					RaceWeekName = document.RaceWeekName,
-					Attachments = attachments.ToList()
-				};
-
-				rabbitMQConnection.Publish("F1.Document", messageDocument);
-				Console.WriteLine($" [x] Sent {messageDocument.Name}");
-
-				await Task.Delay(10000);
-			}
-		});
-	}
+        await host.RunAsync();
+    }
 }

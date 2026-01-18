@@ -19,7 +19,6 @@ internal class Config
 
     public F1 Formula1 { get; set; }
 
-
     public static Config Generate(string path)
     {
         Config cfg = new Config();
@@ -39,7 +38,7 @@ internal class Config
         if (File.Exists(path))
         {
             string? configText = File.ReadAllText(path);
-            Config cfg = JsonSerializer.Deserialize<Config>(configText);
+            Config? cfg = JsonSerializer.Deserialize<Config>(configText)!;
 
             return cfg ?? Generate(path);
         }

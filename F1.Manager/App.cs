@@ -1,126 +1,140 @@
-﻿using F1;
+﻿using F1.Common;
 using F1.Contexts;
 using F1.Models;
-using F1.Common;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Timer = System.Timers.Timer;
 
 namespace F1.Manager;
 
 internal class App
 {
-	private static Config Cfg;
+    // TODO: TEMP: Move these with the RaceSchedulerer into its own service class.
+    private static ILogger<App> logger;
+    private static F1Db f1Db;
+    private static RabbitMQConnectionService rabbitMQConnectionService;
 
-	private static F1Db F1Db;
-	private static RabbitMQConnection rabbitMQConnection;
+    static async Task Main(string[] args)
+    {
+        Console.Title = "F1 Manager";
 
-	static async Task Main(string[] args)
-	{
-		Cfg = Config.Load();
+        HostApplicationBuilder builder = Host.CreateApplicationBuilder(args);
+        builder.Configuration
+            .SetBasePath(AppContext.BaseDirectory)
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+            .AddEnvironmentVariables()
+            .AddCommandLine(args);
 
-		F1Db = new F1Db(Cfg.MySQLConfig);
-		rabbitMQConnection = new RabbitMQConnection(Cfg.RabbitMQConfig);
+        builder.Logging.ClearProviders();
+        builder.Logging.AddConsole();
 
-		if (!await F1Db.ConnectAsync())
-		{
-			Console.WriteLine("Could not connect to MySQL!");
-			return;
-		}
+        builder.Services.Configure<DbConfig>(builder.Configuration.GetSection("MySQL"));
+        builder.Services.Configure<RabbitMQConfig>(builder.Configuration.GetSection("RabbitMQ"));
 
-		await Task.Run(StartupRaceSchedule);
-		await Task.Delay(-1);
-	}
+        builder.Services.AddDbContext<F1Db>();
 
-	private static async Task StartupRaceSchedule()
-	{
-		Event? currentGp = await F1Db.GetCurrentGrandPrixAsync();
-		Event? nextGp = await F1Db.GetNextGrandPrix();
-		Event? selectedGp;
+        builder.Services.AddSingleton<RabbitMQConnectionService>();
+        builder.Services.AddHostedService<RabbitMQConnectionService>();
 
-		// Update current race for Discord title.
-		if ((selectedGp = currentGp ?? nextGp) != null)
-		{
-			rabbitMQConnection.Publish("F1.Manager.GrandPrixResync", selectedGp);
-			Console.WriteLine("Synced over rabbitMQ");
-		}
+        using IHost host = builder.Build();
 
-		ScheduleEvents(true);
-	}
+        logger = host.Services.GetRequiredService<ILogger<App>>();
+        f1Db = host.Services.GetRequiredService<F1Db>();
+        rabbitMQConnectionService = host.Services.GetRequiredService<RabbitMQConnectionService>();
 
-	private static async void ScheduleEvents(bool skipSchedule = false)
-	{
-		Event? targetGp = await F1Db.GetNextGrandPrix();
+        _ = Task.Run(StartupRaceSchedule);
 
-		// Season ended?
-		if (targetGp == null)
-		{
-			Log.Info("Season ended?!");
-			return;
-		}
+        await host.RunAsync();
+    }
 
-		Log.Info($"Starting timers for {targetGp.Name} ({targetGp.Start})");
+    private static async Task StartupRaceSchedule()
+    {
+        while(!rabbitMQConnectionService.IsOpen)
+        {
+            await Task.Delay(250);
+        }
 
-		DateTime now = DateTime.UtcNow;
+        Event? currentGp = await f1Db.GetCurrentGrandPrixAsync();
+        Event? nextGp = await f1Db.GetNextGrandPrix();
+        Event? selectedGp;
 
-#if DEBUG && FAKETIMINGS
-        double targetGpEnd = 300;
-#else
-		double targetGpEnd = (targetGp.GetLastEventEndTime().AddMinutes(30) - now).TotalSeconds;
-#endif
+        // Update current race for Discord title.
+        if ((selectedGp = currentGp ?? nextGp) != null)
+        {
+            rabbitMQConnectionService?.Publish("F1.Manager.GrandPrixResync", selectedGp);
+            logger.LogInformation("Synced over rabbitMQ");
+        }
 
-		if (!skipSchedule)
-		{
-			Event? currentGrandPrix = await F1Db.GetCurrentGrandPrixAsync();
-			if (currentGrandPrix == null)
-			{
-				Log.Info($"Next race weekend updated to {targetGp.Name}.");
-				rabbitMQConnection.Publish("F1.Manager.EventScheduled", targetGp);
-			}
-		}
+        ScheduleEvents(true);
+    }
 
-		simpleTimer("GPEnd", targetGpEnd, async () =>
-		{
-			// Message: race has ended!
-			Log.Info($"Race weekend ended ${targetGp.Name}");
+    private static async void ScheduleEvents(bool skipSchedule = false)
+    {
+        Event? targetGp = await f1Db.GetNextGrandPrix();
 
-			rabbitMQConnection.Publish("F1.Manager.GrandPrixEnd", targetGp);
-			ScheduleEvents();
-		});
+        if (targetGp == null)
+        {
+            logger.LogInformation("Season ended?!");
+            return;
+        }
 
-		// Announce all race events.
-		int count = 1;
+        logger.LogInformation("Starting timers for {name} ({start})", targetGp.Name, targetGp.Start);
 
-		foreach (EventSchedule schedule in targetGp.EventSchedules.OrderBy(s => s.Start))
-		{
-#if DEBUG && FAKETIMINGS
-            double raceStart = count++ * 60;
-#else
-			double raceStart = (schedule.Start - now).TotalSeconds;
-#endif
+        DateTime now = DateTime.UtcNow;
 
-			simpleTimer("Event_" + schedule.SessionTypeString, raceStart, async () =>
-			{
-				string eventJson = schedule.ToJson();
-				rabbitMQConnection.Publish("F1.Manager.EventStart", targetGp);
-			});
-		}
-	}
+        double targetGpEnd = (targetGp.GetLastEventEndTime().AddMinutes(30) - now).TotalSeconds;
 
-	private static Timer simpleTimer(string id, double seconds, Action onElapse)
-	{
-		Console.WriteLine($"Timer {id} scheduled for {seconds} -> {DateTime.UtcNow.AddSeconds(seconds)}!");
+        if (!skipSchedule)
+        {
+            Event? currentGrandPrix = await f1Db.GetCurrentGrandPrixAsync();
+            if (currentGrandPrix == null)
+            {
+                logger.LogInformation("Next race weekend updated to {name}.", targetGp.Name);
+                rabbitMQConnectionService?.Publish("F1.Manager.EventScheduled", targetGp);
+            }
+        }
 
-		Timer timer = new Timer(TimeSpan.FromSeconds(seconds));
-		timer.AutoReset = false;
-		timer.Elapsed += (s, e) =>
-		{
-			Console.WriteLine($"{id} timer has elapsed!");
+        simpleTimer("GPEnd", targetGpEnd, async () =>
+        {
+            // Message: race has ended!
+            logger.LogInformation("Race weekend ended ${name}", targetGp.Name);
 
-			onElapse.Invoke();
-			timer.Dispose();
-		};
+            rabbitMQConnectionService?.Publish("F1.Manager.GrandPrixEnd", targetGp);
+            ScheduleEvents();
+        });
 
-		timer.Start();
-		return timer;
-	}
+        // Announce all race events.
+        foreach (EventSchedule schedule in targetGp.EventSchedules.OrderBy(s => s.Start))
+        {
+            double raceStart = (schedule.Start - now).TotalSeconds;
+
+            simpleTimer("Event_" + schedule.SessionTypeString, raceStart, async () =>
+            {
+                string eventJson = schedule.ToJson();
+                rabbitMQConnectionService?.Publish("F1.Manager.EventStart", targetGp);
+            });
+        }
+    }
+
+    private static Timer simpleTimer(string id, double seconds, Action onElapse)
+    {
+        logger.LogInformation("Timer {id} scheduled for {seconds} -> {toSeconds}!", id, seconds, DateTime.UtcNow.AddSeconds(seconds));
+
+        Timer timer = new Timer(TimeSpan.FromSeconds(seconds));
+        timer.AutoReset = false;
+        timer.Elapsed += (s, e) =>
+        {
+            logger.LogInformation("{id} timer has elapsed!", id);
+
+            onElapse.Invoke();
+            timer.Dispose();
+        };
+
+        timer.Start();
+        return timer;
+    }
 }

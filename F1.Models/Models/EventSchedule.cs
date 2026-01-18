@@ -8,7 +8,7 @@ namespace F1.Models;
 [PrimaryKey("Key")]
 internal class EventSchedule
 {
-    public string Key { get; set; }
+    public required string Key { get; set; }
 
     public uint EventKey { get; set; }
     public SessionType Session { get; set; }
@@ -44,7 +44,7 @@ internal class EventSchedule
         _ => "Race"
     };
 
-    public string? Status { get; set; }
+    public string? Status { get; set; } = "";
     public ScheduleStatus ScheduleStatus => Status switch
     {
         "TBC" => ScheduleStatus.TBC,

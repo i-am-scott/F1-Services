@@ -1,5 +1,5 @@
-﻿namespace F1.Common;
-
+﻿using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
@@ -7,10 +7,17 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-internal class RabbitMQConnection
+namespace F1.Common;
+
+internal sealed class RabbitMQConnectionService : IHostedService
 {
-    private IConnection connection { get; set; }
+    private readonly ILogger<RabbitMQConnectionService> logger;
+    private readonly RabbitMQConfig configuration;
+
+    private IConnection connection = default!;
     private Dictionary<string, IModel> channels = new Dictionary<string, IModel>();
+
+    public bool IsOpen => connection?.IsOpen ?? false;
 
     private JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
     {
@@ -18,27 +25,51 @@ internal class RabbitMQConnection
         ReferenceHandler = ReferenceHandler.Preserve
     };
 
-    public RabbitMQConnection(IOptions<DbConfig> cfg)
+    public RabbitMQConnectionService(ILogger<RabbitMQConnectionService> _logger, IOptions<RabbitMQConfig> _dbConfiguration)
     {
-        ConnectionFactory connectionFactory = new ConnectionFactory
+        logger = _logger;
+        configuration = _dbConfiguration.Value;
+    }
+
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+        ConnectionFactory factory = new ConnectionFactory
         {
-            HostName = cfg.Value.Host,
-            Port = cfg.Value.Port,
-            UserName = cfg.Value.Username,
-            Password = cfg.Value.Password
+            HostName = configuration.Host,
+            UserName = configuration.Username,
+            Password = configuration.Password,
+            Port = configuration.Port,
+            DispatchConsumersAsync = true,
+            AutomaticRecoveryEnabled = true,
+            TopologyRecoveryEnabled = true
         };
 
-        connection = connectionFactory.CreateConnection();
+        connection = factory.CreateConnection();
+
+        logger.LogInformation("Connected to RabbitMQ server...");
+
         connection.CallbackException += (sender, ea) =>
         {
-            Log.Error("RabbitMQ Connection Exception: " + ea.Exception.Message);
+            logger.LogWarning("RabbitMQ Connection Exception: {ExceptionMessage}", ea.Exception.Message);
         };
+
+        return Task.CompletedTask;
+    }
+
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        logger.LogInformation("Stopping RabbitMQ connection...");
+        connection.Dispose();
+
+        return Task.CompletedTask;
     }
 
     private IModel getQueue(string queueName)
     {
         if (channels.TryGetValue(queueName, out IModel? channel))
+        {
             return channel;
+        }
 
         channel = connection.CreateModel();
 
@@ -64,7 +95,7 @@ internal class RabbitMQConnection
         return true;
     }
 
-    public RabbitMQConnection Subscribe<T>(string queueName, Action<T> onReceived)
+    public RabbitMQConnectionService Subscribe<T>(string queueName, Action<T> onReceived)
     {
         IModel channel = getQueue(queueName);
 

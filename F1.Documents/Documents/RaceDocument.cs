@@ -1,41 +1,41 @@
 ﻿using F1.Common;
 using System.Net;
 
-namespace F1.Documents.Documents;
+namespace F1.Documents;
 
 internal class RaceDocument
 {
-	public long Id => Date.ToFileTimeUtc();
-	public string Name;
-	public string RaceWeekName;
-	public string DocumentPath;
+    public long Id => Date.ToFileTimeUtc();
+    public required string Name;
+    public required string RaceWeekName;
 
-	public byte[] DocumentData;
-	public Dictionary<string, MemoryStream> DocumentPageImages;
+    public required string DocumentPath;
 
-	public string DateString;
-	public DateTime Date;
+    public byte[]? DocumentData;
+    public Dictionary<string, MemoryStream>? DocumentPageImages;
 
-	private int DownloadPercent;
+    public required string DateString;
+    public DateTime Date;
 
-	// TODO: Convert to the Util string extension class.
-	public async Task<byte[]> Download(string inPath)
-	{
-		using (WebClient client = new())
-		{
-			client.DownloadProgressChanged += Client_DownloadProgressChanged;
-			return await client.DownloadDataTaskAsync(new Uri(inPath));
-		}
-	}
+    private int DownloadPercent;
 
-	private void Client_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
-	{
-		if (DownloadPercent >= e.ProgressPercentage)
-		{
-			return;
-		}
+    public async Task<byte[]> Download(string inPath)
+    {
+        using (WebClient client = new())
+        {
+            client.DownloadProgressChanged += Client_DownloadProgressChanged;
+            return await client.DownloadDataTaskAsync(new Uri(inPath));
+        }
+    }
 
-		DownloadPercent = e.ProgressPercentage;
-		Log.Info($"Downloading {Name} ({e.ProgressPercentage}%) Completed: {e.ProgressPercentage >= 100}");
-	}
+    private void Client_DownloadProgressChanged(object sender, DownloadProgressChangedEventArgs e)
+    {
+        if (DownloadPercent >= e.ProgressPercentage)
+        {
+            return;
+        }
+
+        DownloadPercent = e.ProgressPercentage;
+        Log.Info($"Downloading {Name} ({e.ProgressPercentage}%) Completed: {e.ProgressPercentage >= 100}");
+    }
 }

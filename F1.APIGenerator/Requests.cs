@@ -58,7 +58,7 @@ internal static class Requests
 		return default;
 	}
 
-	internal static async Task<EventResults> GetEventResultAsync(uint? meeting)
+	internal static async Task<EventResults?> GetEventResultAsync(uint? meeting)
 	{
 		return await fetchJsonResponse<EventResults>($"v2/fom-results/race?meeting={meeting}");
 	}

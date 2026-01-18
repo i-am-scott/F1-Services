@@ -17,6 +17,8 @@
     <PackageReference Include="DSharpPlus" Version="5.0.0-nightly-02450" />
     <PackageReference Include="DSharpPlus.Commands" Version="5.0.0-nightly-02450" />
     <PackageReference Include="HtmlAgilityPack" Version="1.11.72" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.2" />
+    <PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="10.0.2" />
     <PackageReference Include="Pomelo.EntityFrameworkCore.MySql" Version="9.0.0-preview.2.efcore.9.0.0" />
     <PackageReference Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageReference Include="RestSharp" Version="112.1.0" />

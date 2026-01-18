@@ -175,7 +175,7 @@ public class App
 		foreach (DiscordChannel discordChannel in Channels.GetChannels())
 		{
 			DiscordThreadChannel thread = await discordChannel.GetThread($"{raceDocumentMessage.RaceWeekName} Documents");
-			if (thread != null)
+			if (thread is not null)
 			{
 				await thread.SendMessageAsync(builder);
 			}
@@ -213,12 +213,12 @@ public class App
 
 	private static async Task onEventStart(EventSchedule ev)
 	{
-		if (ev == null)
+		if (ev is null)
 		{
 			return;
 		}
 
-		string name = ev.Event.Name;
+		string name = ev.Event?.Name;
 		string eventName = ev.SessionTypeString;
 
 		Console.WriteLine(ev.Event.Circuit);

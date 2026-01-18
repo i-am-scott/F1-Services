@@ -7,8 +7,8 @@ namespace F1.APIGenerator;
 
 internal class App
 {
-	internal static Config Cfg;
-	internal static F1Db F1Db;
+	internal static Config? Cfg;
+	internal static F1Db? F1Db;
 
 	static async Task Main(string[] args)
 	{
@@ -20,7 +20,7 @@ internal class App
 		Cfg = Config.Load();
 		F1Db = new F1Db(Cfg.MySQLConfig);
 
-		if (Cfg == null || F1Db == null)
+		if (Cfg is null || F1Db is null)
 		{
 			return;
 		}
@@ -96,7 +96,7 @@ internal class App
 	static async Task GetEventResults(uint meeting)
 	{
 		F1.APIGenerator.Models.EventResults? eventResults = await Requests.GetEventResultAsync(meeting);
-		if (eventResults == null)
+		if (eventResults is null)
 		{
 			Requests.Error($"No event results found for meeting key {meeting}");
 			return;
@@ -279,15 +279,16 @@ internal class App
 			await F1Db.Events.AddAsync(dbGrandPrix);
 
 			F1.APIGenerator.Models.EventInfo? eventInfo = await Requests.GetEventAsync(meetingKey);
-			if (eventInfo == null)
+			if (eventInfo is null)
 			{
 				Requests.Error($"Could not find specific event info for {meetingKey}.");
 				continue;
 			}
 
-			if (eventInfo.meetingContext == null)
+			if (eventInfo.meetingContext is null || eventInfo.meetingContext.timetables is null)
 			{
 				Requests.Error($"No schedule context for {meetingKey}.");
+                continue;
 			}
 
 			await F1Db.EventSchedules.Where(es => es.EventKey == meetingKey).ExecuteDeleteAsync();

@@ -25,7 +25,7 @@ internal static class StringExtensions
         }
     }
 
-    public static async Task<HtmlDocument> DownloadHTML(this string input)
+    public static async Task<HtmlDocument?> DownloadHTML(this string input)
     {
         try
         {
@@ -42,7 +42,7 @@ internal static class StringExtensions
             Console.WriteLine(ex.Message);
         }
 
-        return null;
+        return default;
     }
 
     private static string[] timeFormats = [

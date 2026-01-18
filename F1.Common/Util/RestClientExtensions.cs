@@ -22,7 +22,7 @@ internal static class RestClientExtensions
         }
 
         RestResponse? response = await client.GetAsync(req);
-        if (response == null)
+        if (response is null || response.Content is null)
         {
             return default;
         }

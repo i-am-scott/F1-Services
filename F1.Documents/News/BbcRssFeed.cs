@@ -3,7 +3,7 @@ using System.Xml;
 
 namespace F1.News;
 
-public class BBCRssFeed
+public sealed class BBCRssFeed
 {
     private string BBCNewsUrl = "https://feeds.bbci.co.uk/sport/formula1/rss.xml";
 

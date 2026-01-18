@@ -4,7 +4,7 @@ using RestSharp;
 
 namespace F1.LiveTelemetry.LiveTimingApi;
 
-// https,//livetiming.formula1.com/static/2024/Index.json
+// https://livetiming.formula1.com/static/2024/Index.json
 
 internal class LiveTimingSession
 {

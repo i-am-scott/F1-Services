@@ -1,20 +1,20 @@
 {
-  "MySQLConfig": {
-    "Host": "vm",
-    "Password": null,
-    "Username": "root",
-    "Database": "f1",
-    "Debug": false
-  },
-  "RabbitMQConfig": {
-    "Host": "vm",
-    "Port": 5672,
-    "Password": null,
-    "Username": null
-  },
-  "DiscordConfig": {
-    "Secret":null,
-    "DevSecret":null,
-    "Webhook":null
-  }
+	"MySQLConfig": {
+		"Host": "vm",
+		"Password": null,
+		"Username": "root",
+		"Database": "f1",
+		"Debug": false
+	},
+	"RabbitMQConfig": {
+		"Host": "vm",
+		"Port": 5672,
+		"Password": "guest",
+		"Username": "guest"
+	},
+	"DiscordConfig": {
+		"Secret": null,
+		"DevSecret": null,
+		"Webhook": null
+	}
 }

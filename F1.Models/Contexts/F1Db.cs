@@ -1,11 +1,15 @@
-﻿using F1.Models;
-using F1.Common;
+﻿using F1.Common;
+using F1.Models;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace F1.Contexts;
 
 internal class F1Db : DbContext
 {
+    private ILogger<F1Db> logger;
+
     private string connectionString = "Server={Host}; Port={Port}; Uid={Username}; Pwd={Password}; Database={Database}";
     private bool debugStatements = false;
 
@@ -22,18 +26,17 @@ internal class F1Db : DbContext
     public DbSet<EventAward> EventAwards { get; set; }
     public DbSet<EventResult> EventResults { get; set; }
 
-    public F1Db(DbConfig config)
+    public F1Db(DbContextOptions<F1Db> options, IOptions<DbConfig> config, ILogger<F1Db> _logger)
     {
-#if !DEBUG
-        debugStatements = config.Debug;
-#endif
+        logger = _logger;
+        debugStatements = config.Value.Debug;
 
         connectionString = connectionString
-            .Replace("{Host}", config.Host)
-            .Replace("{Port}", config.Port.ToString())
-            .Replace("{Database}", config.Database)
-            .Replace("{Username}", config.Username)
-            .Replace("{Password}", config.Password);
+            .Replace("{Host}", config.Value.Host)
+            .Replace("{Port}", config.Value.Port.ToString())
+            .Replace("{Database}", config.Value.Database)
+            .Replace("{Username}", config.Value.Username)
+            .Replace("{Password}", config.Value.Password);
     }
 
     public async Task<bool> ConnectAsync()
@@ -58,6 +61,7 @@ internal class F1Db : DbContext
                 .EnableDetailedErrors()
                 .LogTo(Console.WriteLine);
         }
+
         optionsBuilder.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
     }
 

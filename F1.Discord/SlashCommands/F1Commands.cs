@@ -142,10 +142,15 @@ public static class F1Commands
 	[Command("role"), Description("Gives you the F1 role")]
 	public static async Task F1GiveRole(SlashCommandContext ctx)
 	{
-		await ctx.DeferResponseAsync();
+        if (ctx.Guild is null || ctx.Member is null)
+        {
+            return;
+        }
 
-		DiscordRole role = ctx.Guild.Roles.Where(r => r.Value.Name == "Formula 1").FirstOrDefault().Value;
-		if (role != null)
+        await ctx.DeferResponseAsync();
+
+		DiscordRole? role = ctx.Guild.Roles.Where(r => r.Value.Name == "Formula 1").FirstOrDefault().Value;
+		if (role is not null)
 		{
 			Message.Content = "Role set!";
 
@@ -161,9 +166,9 @@ public static class F1Commands
 	#region Helpers
 	private static async Task<DiscordMessage> DisplayEvent(SlashCommandContext ctx)
 	{
-		return null;
+		throw new NotImplementedException();
 
-		/*
+        /*
         if (race.Empty)
         {
             return await ctx.ErrorResponse("Unable to load events. Try again later.");
@@ -200,12 +205,11 @@ public static class F1Commands
                 embed.AddField(":racing_car: Sprint", Formatter.Timestamp(race.Sprint.DateTime, TimestampFormat.LongDateTime));
             }
 
-
             embed.ImageUrl = App.Config.Formula1.CircuitImages.Replace("{id}", race.Circuit.circuitId);
             embed.AddField(":checkered_flag: Race Day", Formatter.Timestamp(race.DateTime, TimestampFormat.LongDateTime));
             return await ctx.FollowUpEmbedAsync(embed);
         }
         */
-	}
+    }
 	#endregion
 }
