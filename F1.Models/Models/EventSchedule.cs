@@ -10,7 +10,7 @@ internal class EventSchedule
 {
     public required string Key { get; set; }
 
-    public uint EventKey { get; set; }
+    public int EventKey { get; set; }
     public SessionType Session { get; set; }
 
     public DateTime Start { get; set; }

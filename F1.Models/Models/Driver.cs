@@ -7,15 +7,15 @@ namespace F1.Models;
 [PrimaryKey("RacingNumber")]
 public class Driver
 {
-    public uint Season { get; set; }
-    public uint RacingNumber { get; set; }
-    public uint Key { get; set; }
-    public uint TeamKey { get; set; }
+    public int Season { get; set; }
+    public int RacingNumber { get; set; }
+    public int Key { get; set; }
+    public int TeamKey { get; set; }
 
-    public required string TLA { get; set; }
+    public string TLA { get; set; }
 
-    public required string FirstName { get; set; }
-    public required string LastName { get; set; }
+    public string FirstName { get; set; }
+    public string LastName { get; set; }
 
     public Location Nationality { get; set; }
 

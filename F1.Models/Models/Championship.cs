@@ -7,9 +7,9 @@ namespace F1.Models;
 [PrimaryKey("DriverKey")]
 public class Championship
 {
-    public uint Season { get; set; }
-    public uint TeamKey { get; set; }
-    public uint DriverKey { get; set; }
-    public uint Position { get; set; }
-    public uint Points { get; set; }
+    public int Season { get; set; }
+    public int TeamKey { get; set; }
+    public int DriverKey { get; set; }
+    public int Position { get; set; }
+    public int Points { get; set; }
 }

@@ -1,114 +1,108 @@
-﻿using F1.Common;
-using F1.APIGenerator.Models;
+﻿using F1.APIGenerator.Models;
+using F1.Common;
+using Microsoft.Extensions.Logging;
 using RestSharp;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
 namespace F1.APIGenerator;
 
-internal static class Requests
+internal class Requests
 {
-	private static RestClient client => new RestClient(new RestClientOptions("https://api.formula1.com/")
-	{
-		ThrowOnAnyError = true,
-		Timeout = TimeSpan.FromSeconds(5),
-	}, (headers) =>
-	{
-		headers.Add("Accept", "application/json");
-		headers.Add("apikey", "BQ1SiSmLUOsp460VzXBlLrh689kGgYEZ");
-		headers.Add("locale", "en");
-	});
+    private static RestClient client => new RestClient(new RestClientOptions("https://api.formula1.com/")
+    {
+        ThrowOnAnyError = true,
+        Timeout = TimeSpan.FromSeconds(5),
+    }, (headers) =>
+    {
+        headers.Add("Accept", "application/json");
+        headers.Add("apikey", "BQ1SiSmLUOsp460VzXBlLrh689kGgYEZ");
+        headers.Add("locale", "en");
+    });
 
-	private static bool isSerializerSetup = false;
-	private static JsonSerializerOptions serializerOptions = new JsonSerializerOptions()
-	{
-		NumberHandling = JsonNumberHandling.AllowReadingFromString,
-	};
+    private ILogger<Requests> logger;
 
-	private static async Task<T?> fetchJsonResponse<T>(string endPoint)
-	{
-		RestRequest req = new RestRequest(endPoint);
-		req.Method = Method.Get;
+    private static bool isSerializerSetup = false;
+    private static JsonSerializerOptions serializerOptions = new JsonSerializerOptions()
+    {
+        NumberHandling = JsonNumberHandling.AllowReadingFromString,
+    };
 
-		if (!isSerializerSetup)
-		{
-			serializerOptions.Converters.Add(new LocationEnumConverter());
-			serializerOptions.Converters.Add(new SessionTypeEnumConverter());
-			serializerOptions.Converters.Add(new RewardTypeEnumConverter());
+    public Requests(ILogger<Requests> _logger)
+    {
+        logger = _logger;
+    }
 
-			isSerializerSetup = true;
-		}
+    private async Task<T?> fetchJsonResponse<T>(string endPoint)
+    {
+        RestRequest req = new RestRequest(endPoint);
+        req.Method = Method.Get;
 
-		try
-		{
-			RestResponse? response = await client.GetAsync(req);
-			if (response == null || !response.IsSuccessful)
-			{
-				Error($"Returned error {response?.Content ?? "No payload"}");
-				return default;
-			}
+        if (!isSerializerSetup)
+        {
+            serializerOptions.Converters.Add(new LocationEnumConverter());
+            serializerOptions.Converters.Add(new SessionTypeEnumConverter());
+            serializerOptions.Converters.Add(new RewardTypeEnumConverter());
 
-			return !string.IsNullOrEmpty(response.Content) ? JsonSerializer.Deserialize<T>(response.Content, serializerOptions) : default;
-		}
-		catch (Exception ex)
-		{
-			Error(ex.Message);
-		}
+            isSerializerSetup = true;
+        }
 
-		return default;
-	}
+        try
+        {
+            RestResponse? response = await client.GetAsync(req);
+            if (response == null || !response.IsSuccessful)
+            {
+                logger.LogError("Returned error {responseContent}", response?.Content ?? "No Payload");
+                return default;
+            }
 
-	internal static async Task<EventResults?> GetEventResultAsync(uint? meeting)
-	{
-		return await fetchJsonResponse<EventResults>($"v2/fom-results/race?meeting={meeting}");
-	}
+            return !string.IsNullOrEmpty(response.Content) ? JsonSerializer.Deserialize<T>(response.Content, serializerOptions) : default;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error trying to fetch Json Request");
+        }
 
-	internal static async Task<DriverList?> GetDriversAsync(uint? season)
-	{
-		if (!season.HasValue)
-		{
-			season = (uint)DateTime.UtcNow.Year;
-		}
+        return default;
+    }
 
-		return await fetchJsonResponse<DriverList>($"v1/editorial-driverlisting/listing?season={season}");
-	}
+    internal async Task<EventResults?> GetEventResultAsync(int? meeting)
+    {
+        return await fetchJsonResponse<EventResults>($"v2/fom-results/race?meeting={meeting}");
+    }
 
-	internal static async Task<EventList?> GetEventsAsync(uint? season)
-	{
-		if (!season.HasValue)
-		{
-			season = (uint)DateTime.UtcNow.Year;
-		}
+    internal async Task<DriverList?> GetDriversAsync(int? season)
+    {
+        if (!season.HasValue)
+        {
+            season = DateTime.UtcNow.Year;
+        }
 
-		return await fetchJsonResponse<EventList>($"v1/editorial-eventlisting/events?season={season}");
-	}
+        return await fetchJsonResponse<DriverList>($"v1/editorial-driverlisting/listing?season={season}");
+    }
 
-	internal static async Task<EventInfo?> GetEventAsync(uint? eventid)
-	{
-		return await fetchJsonResponse<EventInfo>($"v1/event-tracker/meeting/{eventid}");
-	}
+    internal async Task<EventList?> GetEventsAsync(int? season)
+    {
+        if (!season.HasValue)
+        {
+            season = DateTime.UtcNow.Year;
+        }
 
-	internal static async Task<ConstructorList?> GetConstructorsAsync(uint? season)
-	{
-		if (!season.HasValue)
-		{
-			season = (uint)DateTime.UtcNow.Year;
-		}
+        return await fetchJsonResponse<EventList>($"v1/editorial-eventlisting/events?season={season}");
+    }
 
-		return await fetchJsonResponse<ConstructorList>($"v1/editorial-constructorlisting/listing?season={season}");
-	}
+    internal async Task<EventInfo?> GetEventAsync(int? eventid)
+    {
+        return await fetchJsonResponse<EventInfo>($"v1/event-tracker/meeting/{eventid}");
+    }
 
-	internal static void Success(string message)
-	{
-		Console.ForegroundColor = ConsoleColor.Green;
-		Console.Error.WriteLine(message);
-		Console.ForegroundColor = ConsoleColor.White;
-	}
+    internal async Task<ConstructorList?> GetConstructorsAsync(int? season)
+    {
+        if (!season.HasValue)
+        {
+            season = DateTime.UtcNow.Year;
+        }
 
-	internal static void Error(string message)
-	{
-		Console.ForegroundColor = ConsoleColor.Red;
-		Console.Error.WriteLine(message);
-		Console.ForegroundColor = ConsoleColor.White;
-	}
+        return await fetchJsonResponse<ConstructorList>($"v1/editorial-constructorlisting/listing?season={season}");
+    }
 }

@@ -7,8 +7,8 @@ namespace F1.Models;
 [PrimaryKey("Key")]
 internal class Event
 {
-    public uint Key { get; set; }
-    public uint Season { get; set; }
+    public int Key { get; set; }
+    public int Season { get; set; }
 
     public required string Name { get; set; }
     public required string OfficialName { get; set; }

@@ -53,23 +53,23 @@ internal static class StringExtensions
         @"s\.f"
     ];
 
-    public static uint ParseStopwatchToMilliseconds(this string input)
+    public static int ParseStopwatchToMilliseconds(this string input)
     {
         if (input == null)
         {
             return 0;
         }
 
-        return (uint)TimeSpan.ParseExact(input, timeFormats, System.Globalization.CultureInfo.InvariantCulture).TotalMilliseconds;
+        return (int)TimeSpan.ParseExact(input, timeFormats, System.Globalization.CultureInfo.InvariantCulture).TotalMilliseconds;
     }
 
-    public static uint ParseStopwatchToSeconds(this string input)
+    public static int ParseStopwatchToSeconds(this string input)
     {
         if (input == null)
         {
             return 0;
         }
 
-        return (uint)TimeSpan.ParseExact(input, timeFormats, System.Globalization.CultureInfo.InvariantCulture).TotalSeconds;
+        return (int)TimeSpan.ParseExact(input, timeFormats, System.Globalization.CultureInfo.InvariantCulture).TotalSeconds;
     }
 }

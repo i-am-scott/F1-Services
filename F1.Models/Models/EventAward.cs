@@ -7,12 +7,12 @@ namespace F1.Models;
 [PrimaryKey("Key")]
 public class EventAward
 {
-    public required string Key { get; set; }
-    public required uint EventKey { get; set; }
+    public string Key { get; set; }
+    public int EventKey { get; set; }
 
     public RewardType RewardType { get; set; }
 
-    public required string Title { get; set; }
-    public required string Winner { get; set; }
-    public uint Time { get; set; }
+    public string Title { get; set; }
+    public string Winner { get; set; }
+    public int Time { get; set; }
 }

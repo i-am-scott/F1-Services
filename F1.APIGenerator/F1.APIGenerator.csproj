@@ -24,6 +24,12 @@
     <PackageReference Include="RestSharp" Version="112.1.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
   <Import Project="..\F1.Common\F1.Common.projitems" Label="Shared" />
 
   <Import Project="..\F1.Models\F1.Models.projitems" Label="Shared" />

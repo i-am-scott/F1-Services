@@ -7,8 +7,8 @@ namespace F1.Models;
 [PrimaryKey("Season", "Key")]
 internal class Team
 {
-    public uint Season { get; set; }  
-    public uint Key { get; set; }
+    public int Season { get; set; }  
+    public int Key { get; set; }
 
     public required string Name { get; set; }
     public string? Color { get; set; }
