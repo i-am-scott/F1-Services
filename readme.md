@@ -8,7 +8,6 @@ Uses the F1 API and f1timings live data.
 - MySQL/MariaDB
 - RedditMQ
 - .NET 9.0
-- Ghostscript.NET for PDF to PNG conversion.
 
 #### F1.Models & F1.Common
 Shared projets with data models and common utilities.
