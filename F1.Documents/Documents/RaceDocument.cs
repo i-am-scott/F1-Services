@@ -36,6 +36,6 @@ internal class RaceDocument
         }
 
         DownloadPercent = e.ProgressPercentage;
-        Log.Info($"Downloading {Name} ({e.ProgressPercentage}%) Completed: {e.ProgressPercentage >= 100}");
+        Console.WriteLine($"Downloading {Name} ({e.ProgressPercentage}%) Completed: {e.ProgressPercentage >= 100}");
     }
 }

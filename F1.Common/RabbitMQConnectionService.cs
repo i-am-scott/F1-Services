@@ -15,9 +15,12 @@ internal sealed class RabbitMQConnectionService : IHostedService
     private readonly RabbitMQConfig configuration;
 
     private IConnection connection = default!;
-    private Dictionary<string, IModel> channels = new Dictionary<string, IModel>();
+    private IChannel channel = default!;
 
     public bool IsOpen => connection?.IsOpen ?? false;
+
+    public Action OnConnected = null!;
+    public Action OnDisconnected = null!;
 
     private JsonSerializerOptions jsonSerializerOptions = new JsonSerializerOptions
     {
@@ -31,7 +34,7 @@ internal sealed class RabbitMQConnectionService : IHostedService
         configuration = _dbConfiguration.Value;
     }
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         ConnectionFactory factory = new ConnectionFactory
         {
@@ -39,21 +42,28 @@ internal sealed class RabbitMQConnectionService : IHostedService
             UserName = configuration.Username,
             Password = configuration.Password,
             Port = configuration.Port,
-            DispatchConsumersAsync = true,
             AutomaticRecoveryEnabled = true,
             TopologyRecoveryEnabled = true
         };
 
-        connection = factory.CreateConnection();
+        connection = await factory.CreateConnectionAsync();
+        channel = await connection.CreateChannelAsync();
 
-        logger.LogInformation("Connected to RabbitMQ server...");
+        channel.ChannelShutdownAsync += async (sender, ea) =>
+        {
+            logger.LogWarning("RabbitMQ Channel Shutdown: {ReplyText}", ea.ReplyText);
+        };
 
-        connection.CallbackException += (sender, ea) =>
+        connection.ConnectionShutdownAsync += async (sender, ea) =>
+        {
+            logger.LogWarning("RabbitMQ Connection Shutdown: {ReplyText}", ea.ReplyText);
+            OnDisconnected?.Invoke();
+        };
+
+        connection.CallbackExceptionAsync += async (sender, ea) =>
         {
             logger.LogWarning("RabbitMQ Connection Exception: {ExceptionMessage}", ea.Exception.Message);
         };
-
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
@@ -64,59 +74,49 @@ internal sealed class RabbitMQConnectionService : IHostedService
         return Task.CompletedTask;
     }
 
-    private IModel getQueue(string queueName)
+    private async Task<IChannel> ensureChannel(string queueName)
     {
-        if (channels.TryGetValue(queueName, out IModel? channel))
+        if (channel is null || channel.IsClosed)
         {
-            return channel;
+            channel = await connection.CreateChannelAsync();
         }
 
-        channel = connection.CreateModel();
+        await channel.ExchangeDeclareAsync(queueName, ExchangeType.Fanout, durable: true, autoDelete: false, noWait: true);
+        await channel.QueueDeclareAsync(queueName, durable: true, exclusive: false, autoDelete: false, noWait: true);
 
-        channel.QueueDeclare(queueName, false, false, false);
-        channel.ExchangeDeclare(queueName, ExchangeType.Fanout);
-
-        channels.Add(queueName, channel);
         return channel;
     }
 
-    public bool Publish(string queueName, dynamic obj)
+    public async Task<bool> PublishAsync(string queueName, dynamic obj)
     {
-        IModel channel = getQueue(queueName);
+        await ensureChannel(queueName);
 
         string json = JsonSerializer.Serialize(obj, jsonSerializerOptions);
         byte[] jsonBytes = Encoding.UTF8.GetBytes(json);
 
-        channel.BasicPublish(exchange: queueName,
-                             routingKey: string.Empty,
-                             basicProperties: null,
-                             body: jsonBytes);
-
+        await channel.BasicPublishAsync(queueName, string.Empty, jsonBytes);
         return true;
     }
 
-    public RabbitMQConnectionService Subscribe<T>(string queueName, Action<T> onReceived)
+    public async Task<RabbitMQConnectionService> SubscribeAsync<T>(string queueName, Action<T> onReceived)
     {
-        IModel channel = getQueue(queueName);
+        await ensureChannel(queueName);
 
-        channel.QueueBind(queue: queueName,
-                          exchange: queueName,
-                          routingKey: string.Empty);
+        await channel.QueueBindAsync(queueName, queueName, string.Empty);
 
-        EventingBasicConsumer consumer = new EventingBasicConsumer(channel);
-        consumer.Received += (model, ea) =>
+        AsyncEventingBasicConsumer consumer = new AsyncEventingBasicConsumer(channel);
+        consumer.ReceivedAsync += async (model, ea) =>
         {
             string body = Encoding.UTF8.GetString(ea.Body.ToArray());
 
             T? result = JsonSerializer.Deserialize<T>(body, jsonSerializerOptions);
-
             if (result != null)
             {
                 onReceived.Invoke(result);
             }
         };
 
-        channel.BasicConsume(queue: queueName, autoAck: true, consumer: consumer);
+        await channel.BasicConsumeAsync(queueName, true, consumer);
         return this;
     }
 }

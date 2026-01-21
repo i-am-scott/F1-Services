@@ -9,15 +9,13 @@
     <Import_RootNamespace>F1.Common</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="$(MSBuildThisFileDirectory)RabbitMQ.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)RabbitMQConnectionHostedService.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)RabbitMQConnectionService.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\AppBus\AppBus.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\AppBus\IAppBus.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Util\Config.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Util\Formula1.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\DbConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\DiscordConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\JsonConverters.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)Util\Log.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\RabbitMQConfig.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\RestClientExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Util\StringExtensions.cs" />

@@ -57,6 +57,7 @@ internal class App
         while (true)
         {
             string? input = Console.ReadLine();
+
             if (string.IsNullOrEmpty(input))
             {
                 continue;
@@ -175,7 +176,7 @@ internal class App
             entities.Add(results);
         }
 
-        var prev = f1Db.ChangeTracker.AutoDetectChangesEnabled;
+        bool previousDetection = f1Db.ChangeTracker.AutoDetectChangesEnabled;
         f1Db.ChangeTracker.AutoDetectChangesEnabled = false;
 
         try
@@ -189,7 +190,7 @@ internal class App
         }
         finally
         {
-            f1Db.ChangeTracker.AutoDetectChangesEnabled = prev;
+            f1Db.ChangeTracker.AutoDetectChangesEnabled = previousDetection;
             f1Db.ChangeTracker.Clear();
         }
 
@@ -262,9 +263,6 @@ internal class App
             logger.LogInformation("No driver list was found.");
             return;
         }
-
-        var state = f1Db.Database.GetDbConnection().State;
-        Console.WriteLine(state.ToString());
 
         await f1Db.Drivers.Where(d => d.Season == season).ExecuteDeleteAsync();
         await f1Db.Championships.Where(c => c.Season == season).ExecuteDeleteAsync();

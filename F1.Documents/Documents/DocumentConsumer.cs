@@ -108,6 +108,6 @@ internal sealed class DocumentConsumer : BackgroundService
             Attachments = attachments.ToList()
         };
 
-        rabbitMQConnectionService.Publish("F1.Document", messageDocument);
+        rabbitMQConnectionService.PublishAsync("F1.Document", messageDocument);
     }
 }

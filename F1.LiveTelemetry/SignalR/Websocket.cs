@@ -126,7 +126,7 @@ internal sealed class WebSocket : IDisposable
 			}
 			catch (Exception ex)
 			{
-				Log.Info("Processing Error", ex.ToString());
+				Console.WriteLine("Processing Error", ex.ToString());
 			}
 		}
 	}
@@ -142,15 +142,14 @@ internal sealed class WebSocket : IDisposable
 		{
 			case WebSocketMessageType.Text:
 				string payload = Encoding.ASCII.GetString(data);
-				Log.Info("String Recevied", payload);
 
 				if (!string.IsNullOrEmpty(payload))
 				{
 					EventMessageReceived(payload);
 				}
+
 				break;
 			case WebSocketMessageType.Binary:
-				Log.Info("Binary Recevied", data.ToString());
 				await EventOnDataReceived(data);
 				break;
 			default:

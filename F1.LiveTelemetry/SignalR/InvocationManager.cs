@@ -116,14 +116,11 @@ internal class InvocationManager
 	{
 		if (completionMessage == null || completionMessage.InvocationId == null)
 		{
-			Log.Error("Invocation", "Received Invocation completion message but it did not contain an InvocationId");
 			return;
 		}
 
 		if (invocationRequests.Remove(completionMessage.InvocationId, out InvocationRequest? item))
 		{
-			Log.Info("Invocation", "Received Invocation completion message!");
-
 			item.CompletionMessage = completionMessage;
 			item.TaskPromise?.TrySetResult(completionMessage);
 		}

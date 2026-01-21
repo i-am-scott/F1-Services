@@ -48,7 +48,7 @@ internal class F1Db : DbContext
         }
         catch (Exception ex)
         {
-            Log.Error(ex.Message);
+            logger.LogCritical(ex, "MySQL Connection Error");
             return false;
         }
     }

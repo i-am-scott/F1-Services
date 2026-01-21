@@ -62,14 +62,14 @@ public class App
             {
                 if (element.TryGetProperty("Message", out JsonElement _))
                 {
-                    rabbitMQConnection.Publish("F1.RaceControlMessages", element);
+                    rabbitMQConnection.PublishAsync("F1.RaceControlMessages", element);
                 }
 
                 if (element.TryGetProperty("Messages", out JsonElement messages))
                 {
                     foreach (var message in messages.EnumerateObject())
                     {
-                        rabbitMQConnection.Publish("F1.RaceControlMessages", message.Value);
+                        rabbitMQConnection.PublishAsync("F1.RaceControlMessages", message.Value);
                     }
                 }
             }

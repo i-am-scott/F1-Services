@@ -65,7 +65,7 @@ internal class App
         // Update current race for Discord title.
         if ((selectedGp = currentGp ?? nextGp) != null)
         {
-            rabbitMQConnectionService?.Publish("F1.Manager.GrandPrixResync", selectedGp);
+            rabbitMQConnectionService?.PublishAsync("F1.Manager.GrandPrixResync", selectedGp);
             logger.LogInformation("Synced over rabbitMQ");
         }
 
@@ -94,7 +94,7 @@ internal class App
             if (currentGrandPrix == null)
             {
                 logger.LogInformation("Next race weekend updated to {name}.", targetGp.Name);
-                rabbitMQConnectionService?.Publish("F1.Manager.EventScheduled", targetGp);
+                rabbitMQConnectionService?.PublishAsync("F1.Manager.EventScheduled", targetGp);
             }
         }
 
@@ -103,7 +103,7 @@ internal class App
             // Message: race has ended!
             logger.LogInformation("Race weekend ended ${name}", targetGp.Name);
 
-            rabbitMQConnectionService?.Publish("F1.Manager.GrandPrixEnd", targetGp);
+            rabbitMQConnectionService?.PublishAsync("F1.Manager.GrandPrixEnd", targetGp);
             ScheduleEvents();
         });
 
@@ -115,7 +115,7 @@ internal class App
             simpleTimer("Event_" + schedule.SessionTypeString, raceStart, async () =>
             {
                 string eventJson = schedule.ToJson();
-                rabbitMQConnectionService?.Publish("F1.Manager.EventStart", targetGp);
+                rabbitMQConnectionService?.PublishAsync("F1.Manager.EventStart", targetGp);
             });
         }
     }
